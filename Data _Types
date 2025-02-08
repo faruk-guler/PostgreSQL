@@ -1,0 +1,112 @@
+devs=# \dTS
+
+| Name                       |         Description
+-----------------------------+--------------------------------
+aclitem                      | access control list
+"any"                        | pseudo-type representing any type
+anyarray                     | pseudo-type representing a polymorphic array type
+anycompatible                | pseudo-type representing a polymorphic common type
+anycompatiblearray           | pseudo-type representing an array of polymorphic common type elements
+anycompatiblemultirange      | pseudo-type representing a multirange over a polymorphic common type
+anycompatiblenonarray        | pseudo-type representing a polymorphic common type that is not an array
+anycompatiblerange           | pseudo-type representing a range over a polymorphic common type
+anyelement                   | pseudo-type representing a polymorphic base type
+anyenum                      | pseudo-type representing a polymorphic base type that is an enum
+anymultirange                | pseudo-type representing a polymorphic base type that is a multirange
+anynonarray                  | pseudo-type representing a polymorphic base type that is not an array
+anyrange                     | pseudo-type representing a range over a polymorphic base type
+bigint                       | ~18 digit integer, 8-byte storage
+bit                          | fixed-length bit string
+bit varying                  | variable-length bit string
+boolean                      | boolean, 'true'/'false'
+box                          | geometric box '(lower left,upper right)'
+bytea                        | variable-length string, binary values escaped
+"char"                       | single character
+character                    | char(length), blank-padded string, fixed storage length
+character varying            | varchar(length), non-blank-padded string, variable storage length
+cid                          | command identifier type, sequence in transaction id
+cidr                         | network IP address/netmask, network address
+circle                       | geometric circle '(center,radius)'
+cstring                      | C-style string
+date                         | date
+datemultirange               | multirange of dates
+daterange                    | range of dates
+double precision             | double-precision floating point number, 8-byte storage
+event_trigger                | pseudo-type for the result of an event trigger function
+fdw_handler                  | pseudo-type for the result of an FDW handler function
+gtsvector                    | GiST index internal text representation for text search
+index_am_handler             | pseudo-type for the result of an index AM handler function
+inet                         | IP address/netmask, host address, netmask optional
+int2vector                   | array of int2, used in system tables
+int4multirange               | multirange of integers
+int4range                    | range of integers
+int8multirange               | multirange of bigints
+int8range                    | range of bigints
+integer                      | -2 billion to 2 billion integer, 4-byte storage
+internal                     | pseudo-type representing an internal data structure
+interval                     | @ <number> <units>, time interval
+json                         | JSON stored as text
+jsonb                        | Binary JSON
+jsonpath                     | JSON path
+language_handler             | pseudo-type for the result of a language handler function
+line                         | geometric line
+lseg                         | geometric line segment '(pt1,pt2)'
+macaddr                      | XX:XX:XX:XX:XX:XX, MAC address
+macaddr8                     | XX:XX:XX:XX:XX:XX:XX:XX, MAC address
+money                        | monetary amounts, $d,ddd.cc
+name                         | 63-byte type for storing system identifiers
+numeric                      | numeric(precision, decimal), arbitrary precision number
+nummultirange                | multirange of numerics
+numrange                     | range of numerics
+oid                          | object identifier(oid), maximum 4 billion
+oidvector                    | array of oids, used in system tables
+path                         | geometric path '(pt1,...)'
+pg_brin_bloom_summary        | BRIN bloom summary
+pg_brin_minmax_multi_summary | BRIN minmax-multi summary
+pg_ddl_command               | internal type for passing CollectedCommand
+pg_dependencies              | multivariate dependencies
+pg_lsn                       | PostgreSQL LSN datatype
+pg_mcv_list                  | multivariate MCV list
+pg_ndistinct                 | multivariate ndistinct coefficients
+pg_node_tree                 | string representing an internal node tree
+pg_snapshot                  | snapshot
+point                        | geometric point '(x, y)'
+polygon                      | geometric polygon '(pt1,...)'
+real                         | single-precision floating point number, 4-byte storage
+record                       | pseudo-type representing any composite type
+refcursor                    | reference to cursor (portal name)
+regclass                     | registered class
+regcollation                 | registered collation
+regconfig                    | registered text search configuration
+regdictionary                | registered text search dictionary
+regnamespace                 | registered namespace
+regoper                      | registered operator
+regoperator                  | registered operator (with args)
+regproc                      | registered procedure
+regprocedure                 | registered procedure (with args)
+regrole                      | registered role
+regtype                      | registered type
+smallint                     | -32 thousand to 32 thousand, 2-byte storage
+table_am_handler             |
+text                         | variable-length string, no limit specified
+tid                          | (block, offset), physical location of tuple
+timestamp without time zone  | date and time
+timestamp with time zone     | date and time with time zone
+time without time zone       | time of day
+time with time zone          | time of day with time zone
+trigger                      | pseudo-type for the result of a trigger function
+tsm_handler                  | pseudo-type for the result of a tablesample method function
+tsmultirange                 | multirange of timestamps without time zone
+tsquery                      | query representation for text search
+tsrange                      | range of timestamps without time zone
+tstzmultirange               | multirange of timestamps with time zone
+tstzrange                    | range of timestamps with time zone
+tsvector                     | text representation for text search
+txid_snapshot                | txid snapshot
+unknown                      | pseudo-type representing an undetermined type
+uuid                         | UUID datatype
+void                         | pseudo-type for the result of a function with no real result
+xid                          | transaction id
+xid8                         | full transaction id
+xml                          | XML content
+(107 rows)
