@@ -1,6 +1,6 @@
 # PostgreSQL Master Guide
 
-**Yazar:** Faruk Guler
+**Yazar:** Faruk Guler www.farukguler.com
 
 ---
 
