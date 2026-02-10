@@ -38,7 +38,7 @@ PostgreSQL (kısaca "Postgres"), nesne-ilişkisel (object-relational) bir verita
 ### a. Açık Kaynak vs Ticari
 
 | Özellik | PostgreSQL | Oracle | MySQL (Enterprise) |
-|:--------|:-----------|:-------|:-------------------|
+| :--- | :--- | :--- | :--- |
 | Lisans Maliyeti | **$0** | $47,500/CPU | $5,000+/sunucu |
 | Vendor Lock-in | Yok | Var | Var (Oracle'a ait) |
 | Community Desteği | Aktif | Ticari | Orta |

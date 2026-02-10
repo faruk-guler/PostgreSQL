@@ -21,6 +21,23 @@ Primary Key olarak `UUID` (v4) kullanmak, index fragmantasyonuna (parçalanma) y
 Diğer veritabanlarının aksine, PostgreSQL'de `VARCHAR(255)` ile `TEXT` arasında performans farkı yoktur. Hatta `TEXT` daha esnektir.
 **✅ Doğru:** Limit gerekmiyorsa `TEXT` kullanın. Limit gerekiyorsa `VARCHAR(n)` kullanın ama performans için değil, veri bütünlüğü için.
 
+### ❌ Anti-Pattern: Constraint Eksikliği
+
+Foreign Key, Unique, Check constraint'leri "performansı düşürür" diye atlamak, veri bütünlüğünü uygulama koduna bırakmak demektir. Uygulama kodu her zaman güvenilir değildir.
+**✅ Doğru:** Veritabanı seviyesinde constraint kullanın. Performans kaybı minimal, veri güvenliği maksimumdir.
+
+```sql
+-- Kötü: Constraint yok
+CREATE TABLE orders (user_id INT, product_id INT);
+
+-- İyi: Foreign Key ile veri bütünlüğü
+CREATE TABLE orders (
+    user_id INT REFERENCES users(id),
+    product_id INT REFERENCES products(id),
+    quantity INT CHECK (quantity > 0)
+);
+```
+
 ---
 
 ## 2. Sorgu (Query) Hataları
@@ -47,6 +64,22 @@ Indexler sütunun ham hali üzerinedir.
 
 `SELECT count(*) FROM table` PostgreSQL'de yavaştır (MVCC yüzünden her satırın canlı olup olmadığına bakmak zorundadır).
 **✅ Doğru:** Tahmini değer yeterliyse `pg_class.reltuples` bakın. Kesin değer gerekliyse ve tablo büyükse, harici bir sayacı trigger ile güncelleyin.
+
+### ❌ Anti-Pattern: LOWER() ile Arama
+
+`WHERE LOWER(email) = 'user@example.com'` index kullanamaz.
+**✅ Doğru:** Case-insensitive collation veya functional index kullanın.
+
+```sql
+-- Yöntem 1: Functional Index
+CREATE INDEX idx_email_lower ON users (LOWER(email));
+WHERE LOWER(email) = LOWER('User@Example.com');
+
+-- Yöntem 2: CITEXT veri tipi (Case-Insensitive TEXT)
+CREATE EXTENSION citext;
+ALTER TABLE users ALTER COLUMN email TYPE citext;
+WHERE email = 'User@Example.com';  -- Index kullanır!
+```
 
 ---
 

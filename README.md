@@ -2,7 +2,7 @@
 
 **Kapsamlı PostgreSQL Eğitim Serisi: Sıfırdan Uzmanlığa**
 
-Bu dizin, PostgreSQL'in her yönünü kapsayan **29 modüllük** kapsamlı bir dokümantasyon setidir. Her doküman, production ortamlarına odaklanarak, gerçek dünya senaryolarında kullanılabilecek pratik bilgiler içerir.
+Bu dizin, PostgreSQL'in her yönünü kapsayan **30 modüllük** kapsamlı bir dokümantasyon setidir. Her doküman, production ortamlarına odaklanarak, gerçek dünya senaryolarında kullanılabilecek pratik bilgiler içerir.
 
 ---
 

@@ -104,7 +104,7 @@ FROM pg_stat_activity
 WHERE state != 'idle' AND (now() - xact_start) > interval '1 hour';
 ```
 
-### 3-2. Transaction ID Wraparound (XID Wraparound)
+### c. Transaction ID Wraparound (XID Wraparound)
 
 **Bu, production'da karşılaşabileceğiniz en tehlikeli durumdur!** Veri kaybına yol açabilir.
 

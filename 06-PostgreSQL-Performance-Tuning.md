@@ -186,7 +186,7 @@ SELECT pg_prewarm('products');
 
 ---
 
-## 6. Parallel Query (Çok Çekirdekli Sorgu Gücü)
+## 7. Parallel Query (Çok Çekirdekli Sorgu Gücü)
 
 PostgreSQL 10+ ile gelen bu özellik, tek bir sorguyu birden fazla CPU çekirdeğinde paralel çalıştırarak **3-10x hızlandırma** sağlayabilir.
 

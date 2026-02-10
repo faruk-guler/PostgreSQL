@@ -50,15 +50,52 @@ PostgreSQL logları varsayılan haliyle okunması zordur. `pgBadger`, log dosyal
 pgbadger /var/lib/pgsql/16/data/log/postgresql-Fri.log -o rapor.html
 ```
 
-Rapor size şunları söyler:
+#### pgBadger Rapor İçeriği
 
 - En çok zaman harcayan sorgular.
 - En sık çalışan sorgular.
 - Checkpoint sıklığı ve I/O yükü.
+- Saat bazında sorgu dağılımı.
+- Lock wait süreleri.
 
 ---
 
-## 3. Olmazsa Olmaz Eklenti: pg_stat_statements
+## 3. Specialty Extensions (Özel İş Yükleri)
+
+PostgreSQL'i "her şeyi yapan veritabanı" haline getiren eklentilerdir.
+
+### a. TimescaleDB (Zaman Serisi)
+
+IoT, metrikler ve finansal veriler için optimize edilmiştir.
+
+- **Hypertable:** Tabloları zamana göre otomatik böler (Partitioning).
+- **Compression:** %90 disk tasarrufu sağlar.
+- **Continuous Aggregates:** Hızlı raporlama için ön hesaplama yapar.
+
+### b. Citus (Dağıtık SQL)
+
+Veritabanını birden fazla sunucuya (node) yayarak yatayda (scale-out) büyümenizi sağlar.
+
+- **Distributed Tables:** Tabloları şarding yaparak nodelara dağıtır.
+- **Parallel SQL:** Tüm CPU'ları aynı anda kullanır.
+
+### c. pgvector (AI & Vector Search)
+
+Yapay zeka (LLM) embeddinglerini saklamak ve benzerlik araması yapmak için kullanılır.
+
+- **Veri Tipi:** `vector(1536)` (OpenAI embedding boyutu)
+- **Index:** IVFFlat ve HNSW ile ultra hızlı cosine similarity araması.
+
+```sql
+CREATE EXTENSION vector;
+CREATE TABLE items (embedding vector(3));
+INSERT INTO items VALUES ('[1,2,3]'), ('[4,5,6]');
+SELECT * FROM items ORDER BY embedding <-> '[3,1,2]' LIMIT 5;
+```
+
+---
+
+## 4. Olmazsa Olmaz Eklenti: pg_stat_statements
 
 Veritabanınızda ne olup bittiğini anlamak için **ZORUNLUDUR**. Her sorgunun istatistiğini (kaç kere çalıştı, ne kadar sürdü, kaç satır döndü) tutar.
 
@@ -88,7 +125,7 @@ LIMIT 5;
 
 ---
 
-## 4. Coğrafi Bilgi Sistemleri: PostGIS
+## 5. Coğrafi Bilgi Sistemleri: PostGIS
 
 PostgreSQL'i dünyanın en iyi GIS (Geographic Information System) veritabanı yapan eklentidir.
 

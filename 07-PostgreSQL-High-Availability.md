@@ -132,5 +132,60 @@ Uygulamanızın her failover işleminde IP adresi değiştirmesi zordur. Bunun y
 
 - HAProxy, Patroni'nin API'sine sorarak "Şu an Primary kim?" diye öğrenir ve trafiği oraya yönlendirir.
 
+---
+
+## 4. Replication Slots (Replikasyon Yuvaları)
+
+**Kritik Sorun:** Eğer bir Standby sunucu uzun süre çevrimdışı kalırsa, Primary sunucu WAL dosyalarını silebilir (archive_command çalışmasa bile). Standby geri geldiğinde "WAL dosyası bulunamadı" hatası alır ve replikasyon kopar.
+
+**Çözüm:** Replication Slots. Primary sunucuya "Bu Standby için WAL'ları sakla" diye talimat verir.
+
+### Replication Slot Oluşturma
+
+Primary sunucuda:
+
+```sql
+-- Physical Replication Slot (Streaming için)
+SELECT * FROM pg_create_physical_replication_slot('standby_slot_1');
+
+-- Mevcut slotları görüntüle
+SELECT slot_name, slot_type, active, restart_lsn 
+FROM pg_replication_slots;
+```
+
+Standby sunucunun `postgresql.conf` dosyasında:
+
+```ini
+primary_slot_name = 'standby_slot_1'
+```
+
+### Dikkat Edilmesi Gerekenler
+
+> [!CAUTION]
+> **Disk Dolma Riski:** Eğer Standby sunucu hiç geri gelmezse, Primary sunucu WAL dosyalarını sonsuza kadar saklar ve disk dolar! Kullanılmayan slotları mutlaka silin:
+>
+> ```sql
+> SELECT pg_drop_replication_slot('standby_slot_1');
+> ```
+
+### Monitoring
+
+```sql
+-- Slot'un ne kadar WAL biriktirdiğini kontrol et
+SELECT slot_name, 
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM pg_replication_slots;
+```
+
+---
+
+## 5. Best Practices Özeti
+
+1. **Patroni kullanın** - Manuel failover risklidir.
+2. **Replication Slots kullanın** - Ama izleyin!
+3. **Synchronous Replication** sadece kritik veriler için - Performans maliyeti yüksektir.
+4. **HAProxy + PgBouncer** kombinasyonu ile uygulama tarafını basitleştirin.
+5. **Test edin** - Failover senaryolarını production'a geçmeden önce mutlaka test edin.
+
 > [!WARNING]
 > Kendi yazdığınız Shell scriptleriyle otomatik failover yapmaya çalışmayın! "Split-Brain" (İki sunucunun da kendini Primary sanıp veri yazması) felaketine yol açabilir. Veri bütünlüğü için Patroni kullanın.

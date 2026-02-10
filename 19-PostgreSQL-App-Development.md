@@ -17,7 +17,7 @@ Veritabanı ne kadar iyi ayarlanırsa ayarlansın, uygulama kodu kötüyse perfo
 
 Modern Python projelerinde `psycopg2` yerine yeni nesil `psycopg` (v3) kullanılmalıdır.
 
-### Kurulum
+### psycopg 3 Kurulumu
 
 ```bash
 pip install "psycopg[binary,pool]"
@@ -76,7 +76,7 @@ def transfer_funds(from_id, to_id, amount):
 
 Go dünyasında standart sürücü `lib/pq` değil, performans canavarı **`pgx`**'tir.
 
-### Kurulum
+### pgx v5 Kurulumu
 
 ```bash
 go get github.com/jackc/pgx/v5
@@ -150,43 +150,14 @@ Yanlış:
 cur.execute(f"SELECT * FROM users WHERE id = {user_id}")
 ```
 
-### 5-b. Plan Caching & Invalidation
-
-PostgreSQL `PREPARE` edilen sorgular için iki tür plan kullanır:
-
-1. **Custom Plan:** Her execution için parametreye özel plan (İlk 5 çalıştırma).
-2. **Generic Plan:** Parametrelerden bağımsız, cache'lenmiş plan (6. çalıştırmadan sonra - eğer maliyeti uygunsa).
-
-**Plan Caching Mode (PG 12+):**
-
-```sql
--- Otomatik (Varsayılan)
-SET plan_cache_mode = 'auto';
-
--- Zorla Custom Plan (Veri dağılımı çok dengesizse - örn: status='ACTIVE' %90, 'BANNED' %1)
-SET plan_cache_mode = 'force_custom_plan';
-
--- Zorla Generic Plan (Çok basit sorgular için planning süresinden tasarruf)
-SET plan_cache_mode = 'force_generic_plan';
-```
-
-**Plan Invalidation:**
-Prepared statement planları şu durumlarda geçersiz olur (ve yeniden planlanır):
-
-- Tablo yapısı değişirse (ALTER TABLE, CREATE INDEX)
-- `ANALYZE` sonrası istatistikler ciddi oranda değişirse
-
-```sql
--- Tüm cache'i temizle
-DEALLOCATE ALL;
-```
-
 Doğru:
 
 ```python
 # GÜVENLİ VE HIZLI
 cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
 ```
+
+### 5-b. Plan Caching & Invalidation
 
 ### Server-Side Prepare
 

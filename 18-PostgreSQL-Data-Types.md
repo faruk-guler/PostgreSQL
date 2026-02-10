@@ -55,7 +55,7 @@ CREATE INDEX idx_tags ON products USING GIN (tags);
 
 Dağıtık sistemlerde çakışmayan benzersiz ID üretmek için kullanılır.
 
-### Kullanım
+### UUID Kullanımı
 
 ```sql
 -- Extension gerekli (v13+ için core'dan, öncesi için)
@@ -74,7 +74,7 @@ INSERT INTO users (email) VALUES ('test@example.com');
 ### UUID vs SERIAL
 
 | Özellik | SERIAL/BIGSERIAL | UUID |
-|:--------|:-----------------|:-----|
+| :--- | :--- | :--- |
 | Boyut | 4/8 byte | 16 byte |
 | Sıralı mı? | Evet (1, 2, 3...) | Hayır (Rastgele) |
 | Dağıtık uygun mu? | Hayır (Çakışır) | Evet |
@@ -97,7 +97,7 @@ Aralıkları (başlangıç-bitiş) tek bir değer olarak saklar. Rezervasyon sis
 - `tstzrange` - Timestamp aralığı (zaman dilimi ile)
 - `daterange` - Date aralığı
 
-### Kullanım
+### Range Types Kullanımı
 
 ```sql
 CREATE TABLE reservations (
@@ -288,8 +288,6 @@ INSERT INTO rectangles (width, height) VALUES (10, 20);
 -- area sütunu otomatik olarak 200 olur.
 -- area sütununa manuel INSERT yapamazsınız!
 ```
-
--- area sütununa manuel INSERT yapamazsınız!
 
 ```
 

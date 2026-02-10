@@ -217,12 +217,11 @@ psql -c "SELECT count(*) FROM customers;"  # Tablonun geri geldiğini doğrula
 
 #### Adım 4: Recovery Testi (DR Drill)
 
+```ini
 recovery_target_time = '2024-05-18 14:34:59'
 
 # Hedefe ulaşınca dur ve yazmaya aç
-
 recovery_target_action = 'promote'
-
 ```
 
 1. Servisi başlat. PostgreSQL logları oynatıp belirtilen zamanda duracak ve sistemi açacaktır.

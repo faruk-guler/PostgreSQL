@@ -79,4 +79,59 @@ Bu süreç PostgreSQL'in neden hem güvenli hem de hızlı olduğunun temel sır
 
 ---
 
-**Tebrikler!** 26 bölümlük "PostgreSQL Master Guide" serisini tamamladınız. Artık PostgreSQL'in kurulumundan iç mimarisine kadar her konuda tam bir ustalık seviyesindesiniz.
+## 7. HOT Updates (Heap Only Tuple)
+
+**Sorun:** Normal bir UPDATE işleminde PostgreSQL hem yeni tuple yazar hem de tüm indexleri günceller. Bu çok maliyetlidir.
+
+**HOT Çözümü:** Eğer güncellenen sütunlar indexli değilse VE yeni tuple aynı sayfaya (page) sığıyorsa, PostgreSQL indexleri hiç güncellemez!
+
+### HOT Nasıl Çalışır?
+
+1. `UPDATE users SET last_login = now() WHERE id = 123;`
+2. PostgreSQL kontrol eder: `last_login` sütunu indexli mi? → Hayır.
+3. Yeni tuple aynı sayfaya sığıyor mu? → Evet.
+4. **Sonuç:** Sadece heap'te (tabloda) yeni tuple yazar, indexlere dokunmaz.
+
+### HOT'un Faydaları
+
+- **Index bloat azalır** - Indexler gereksiz büyümez.
+- **UPDATE hızlanır** - Index yazma maliyeti ortadan kalkar.
+- **VACUUM daha verimli** - Dead tuple'lar aynı sayfada olduğu için temizleme kolay.
+
+### HOT İstatistiklerini Görüntüleme
+
+```sql
+SELECT schemaname, tablename, 
+       n_tup_upd AS total_updates,
+       n_tup_hot_upd AS hot_updates,
+       CASE WHEN n_tup_upd > 0 
+            THEN round(100.0 * n_tup_hot_upd / n_tup_upd, 2) 
+            ELSE 0 
+       END AS hot_update_ratio
+FROM pg_stat_user_tables
+WHERE n_tup_upd > 0
+ORDER BY hot_update_ratio ASC
+LIMIT 10;
+```
+
+> [!TIP]
+> **HOT Optimizasyonu:** Sık güncellenen sütunları (örn: `last_seen`, `view_count`) indexlemeyin. Bunları ayrı bir tabloya taşımayı düşünün.
+
+### HOT'u Engelleyen Durumlar
+
+1. **Indexli sütun güncelleniyor** - Index'i de güncellemek zorundasınız.
+2. **Sayfa dolu** - Yeni tuple aynı sayfaya sığmıyor, başka sayfaya yazılıyor.
+3. **FILLFACTOR düşük** - Sayfada yeterli boş alan bırakılmamış.
+
+**Çözüm:** Sık güncellenen tablolarda `FILLFACTOR` ayarını düşürün:
+
+```sql
+ALTER TABLE users SET (fillfactor = 70);
+VACUUM FULL users;  -- Tabloyu yeniden yazar
+```
+
+---
+
+---
+
+**Tebrikler!** PostgreSQL Master Guide serisini tamamladınız. Artık PostgreSQL'in kurulumundan iç mimarisine kadar her konuda tam bir ustalık seviyesindesiniz.
