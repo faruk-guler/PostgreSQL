@@ -283,7 +283,7 @@ FETCH ABSOLUTE 100 FROM scroll_cursor; -- 100. satır
 ### Cursor vs Array
 
 | Özellik | Cursor | Array (ARRAY_AGG) |
-|:--------|:-------|:------------------|
+| :-------- | :------- | :------------------ |
 | Bellek kullanımı | Düşük (parça parça) | Yüksek (tümü RAM'de) |
 | Performans | Yavaş (network roundtrip) | Hızlı (tek seferde) |
 | Kullanım | Çok büyük veri setleri | Küçük/orta veri setleri |

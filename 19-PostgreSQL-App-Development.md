@@ -180,7 +180,7 @@ EXECUTE get_user(102);
 Uygulamanız şu SQLSTATE kodlarını özel olarak ele almalıdır:
 
 | Kod | Anlamı | Aksiyon |
-|:----|:-------|:--------|
+| :---- | :------- | :-------- |
 | **40001** | `serialization_failure` | Transaction'ı baştan başlat (Retry). |
 | **40P01** | `deadlock_detected` | Transaction'ı baştan başlat. |
 | **57014** | `query_canceled` | Timeout yedin. Sorgunu optimize et. |

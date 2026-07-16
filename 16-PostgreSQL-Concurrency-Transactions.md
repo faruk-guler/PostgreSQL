@@ -9,7 +9,7 @@ PostgreSQL'in eş zamanlı (concurrent) işlemleri kilitlemeden nasıl yönetti�
 SQL standardı 4 izolasyon seviyesi tanımlar, ancak PostgreSQL pratikte 3'ünü destekler.
 
 | Seviye | Dirty Read | Non-Repeatable Read | Phantom Read | PostgreSQL'de Geçerli mi? |
-|:-------|:-----------|:--------------------|:-------------|:--------------------------|
+| :------- | :----------- | :-------------------- | :------------- | :-------------------------- |
 | Read Uncommitted | Evet | Evet | Evet | Hayır (Read Committed gibi davranır) |
 | Read Committed | Hayır | Evet | Evet | ✅ (Varsayılan) |
 | Repeatable Read | Hayır | Hayır | Hayır* | ✅ |
@@ -65,7 +65,7 @@ PostgreSQL'de iki ana kilit türü vardır: **Table-Level** ve **Row-Level**.
 En yaygın kilit türüdür. Sadece etkilenen satırları kilitler.
 
 | Komut | Kilit Türü | Açıklama |
-|:------|:-----------|:---------|
+| :------ | :----------- | :--------- |
 | `SELECT FOR UPDATE` | Exclusive Row Lock | Satırı kilitler, başkası UPDATE/DELETE yapamaz |
 | `SELECT FOR SHARE` | Shared Row Lock | Satırı kilitler, başkası DELETE yapamaz ama UPDATE yapabilir |
 | `UPDATE` / `DELETE` | Exclusive Row Lock | Otomatik olarak konur |
@@ -166,7 +166,7 @@ WHERE NOT l.granted;
 PostgreSQL'de 8 farklı lock mode vardır:
 
 | Lock Mode | Açıklama | Çakışır mı? |
-|:----------|:---------|:------------|
+| :---------- | :--------- | :------------ |
 | **AccessShareLock** | SELECT sırasında alınır | En zayıf, sadece DROP TABLE ile çakışır |
 | **RowShareLock** | SELECT FOR SHARE | EXCLUSIVE ile çakışır |
 | **RowExclusiveLock** | UPDATE/DELETE/INSERT | SHARE ve üzeri ile çakışır |

@@ -73,7 +73,7 @@ sudo apt install -y postgresql-18
 ## 3. Paket Listesi
 
 | Paket                      | Açıklama                                       |
-|:---------------------------|:-----------------------------------------------|
+| :--------------------------- | :----------------------------------------------- |
 | `postgresql-client-18`     | Client kütüphaneleri ve binary'ler             |
 | `postgresql-18`            | Core database server                           |
 | `postgresql-doc-18`        | Dokümantasyon                                  |

@@ -9,7 +9,7 @@ Mevcut bir veritabanından (MySQL, Oracle, MSSQL) PostgreSQL'e geçiş yapmak te
 ### Temel Farklar
 
 | Özellik | MySQL | PostgreSQL |
-|:--------|:------|:-----------|
+| :-------- | :------ | :----------- |
 | `AUTO_INCREMENT` | Destekleniyor | `SERIAL` veya `IDENTITY` kullan |
 | Büyük/Küçük Harf | Case-insensitive (varsayılan) | Case-sensitive (`LOWER()` ile sarmalayın) |
 | Limit Sytax | `LIMIT 10 OFFSET 20` | Aynısı ama `OFFSET` önce yazılabilir |
@@ -104,7 +104,7 @@ psql -U postgres -d newdb -f data/data.sql
 Oracle'ın PL/SQL'i ile PostgreSQL'in PL/pgSQL'i benzer ama bazı farklar vardır:
 
 | Oracle | PostgreSQL |
-|:-------|:-----------|
+| :------- | :----------- |
 | `SYSDATE` | `CURRENT_TIMESTAMP` |
 | `NVL(a, b)` | `COALESCE(a, b)` |
 | `DECODE()` | `CASE` ifadesi |
@@ -119,7 +119,7 @@ Microsoft SQL Server'dan geçişte dikkat edilmesi gereken noktalar:
 ### T-SQL vs PL/pgSQL
 
 | MSSQL | PostgreSQL |
-|:------|:-----------|
+| :------ | :----------- |
 | `IDENTITY(1,1)` | `SERIAL` veya `IDENTITY` |
 | `GETDATE()` | `CURRENT_TIMESTAMP` |
 | `TOP 10` | `LIMIT 10` |

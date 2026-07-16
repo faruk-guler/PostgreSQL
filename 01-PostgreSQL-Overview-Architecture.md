@@ -17,7 +17,7 @@ PostgreSQL, verileri **tablolar** halinde saklayan, **SQL** (Structured Query La
 ### 1.2. Tarihçe
 
 | Yıl | Olay |
-|:----------|:--------------------------------------------------------|
+| :---------- | :-------------------------------------------------------- |
 | **1986**  | Berkeley Üniversitesi'nde POSTGRES projesi başladı     |
 | **1996**  | SQL desteği eklendi, PostgreSQL adını aldı             |
 | **2005**  | Windows desteği eklendi                                |
@@ -63,7 +63,7 @@ SELECT * FROM products WHERE attributes @> '{"brand": "Dell"}';
 ### 1.4. PostgreSQL vs Diğerleri
 
 | Özellik              | PostgreSQL | MySQL   | Oracle        | MSSQL        | MongoDB      |
-|:---------------------|:-----------|:--------|:--------------|:-------------|:-------------|
+| :--------------------- | :----------- | :-------- | :-------------- | :------------- | :------------- |
 | Açık Kaynak          | ✅ Tamamen  | ✅ Kısmen | ❌ Hayır       | ❌ Hayır      | ✅ Kısmen     |
 | Lisans Maliyeti      | $0         | $0      | Çok Pahalı    | Pahalı       | $0           |
 | ACID                 | ✅ Tam      | ✅ Var   | ✅ Tam         | ✅ Tam        | ⚠️ Sınırlı    |

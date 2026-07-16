@@ -255,7 +255,7 @@ jdbc:postgresql://localhost:5432/mydb?ssl=true&sslfactory=org.postgresql.ssl.Non
 ### d. Önemli Connection Parametreleri
 
 | Parametre | Değerler | Açıklama | Önerilen Production Değeri |
-|:----------|:---------|:---------|:---------------------------|
+| :---------- | :--------- | :--------- | :--------------------------- |
 | `sslmode` | disable, allow, prefer, **require**, verify-ca, **verify-full** | SSL zorlama seviyesi | `require` veya `verify-full` |
 | `application_name` | string | `pg_stat_activity`'de görünür, debugging için | Uygulama adı (örn: `web_backend`) |
 | `connect_timeout` | seconds | Bağlantı timeout (varsayılan: sınırsız!) | `10` |

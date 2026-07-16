@@ -264,7 +264,7 @@ ALTER TYPE order_status ADD VALUE 'cancelled' AFTER 'delivered';
 JSON için Bölüm 04'e bakın. Kısaca:
 
 | Özellik | JSONB | Composite Type | ENUM |
-|:--------|:------|:---------------|:-----|
+| :-------- | :------ | :--------------- | :----- |
 | Esneklik | Çok yüksek | Orta | Düşük |
 | Şema zorunlu mu? | Hayır | Evet | Evet |
 | Index desteği | GIN | Kısıtlı | B-Tree |

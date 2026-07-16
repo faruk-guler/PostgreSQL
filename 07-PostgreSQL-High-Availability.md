@@ -40,7 +40,7 @@ synchronous_commit = remote_apply  # En güvenli mod
 ```
 
 | Mod | Açıklama | Veri Kaybı Riski | Performans |
-|:----|:---------|:-----------------|:-----------|
+| :---- | :--------- | :----------------- | :----------- |
 | **off** | Hiç bekleme, anında commit | Yüksek (saniyeler) | En hızlı |
 | **local** | Sadece local WAL'a yaz | Orta (crash'te kayıp var) | Hızlı |
 | **remote_write** | Standby OS buffer'a yazdı | Düşük (OS crash'te kayıp) | Orta |

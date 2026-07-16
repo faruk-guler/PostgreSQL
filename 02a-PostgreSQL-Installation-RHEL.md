@@ -73,7 +73,7 @@ sudo systemctl start postgresql.service
 ## 3. Dağıtım Varsayılan Sürümleri
 
 | Dağıtım                    | PostgreSQL Sürümü                    |
-|:---------------------------|:-------------------------------------|
+| :--------------------------- | :------------------------------------- |
 | RHEL/Rocky/AlmaLinux 10    | 16                                   |
 | RHEL/Rocky/AlmaLinux 9     | 16, 15, 13 (modüller ile)            |
 | RHEL/Rocky/AlmaLinux 8     | 15, 13, 12, 10, 9.6 (modüller ile)   |
@@ -85,7 +85,7 @@ sudo systemctl start postgresql.service
 ## 4. Paket Listesi
 
 | Paket                  | Açıklama                                     |
-|:-----------------------|:---------------------------------------------|
+| :----------------------- | :--------------------------------------------- |
 | `postgresql-client`    | Client kütüphaneleri ve binary'ler           |
 | `postgresql-server`    | Core database server                         |
 | `postgresql-contrib`   | Ek modüller (pg_stat_statements vb.)         |

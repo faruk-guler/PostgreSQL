@@ -21,7 +21,7 @@ PostgreSQL (kısaca "Postgres"), nesne-ilişkisel (object-relational) bir verita
 ## 2. Tarihçe
 
 | Yıl | Olay |
-|:----|:-----|
+| :---- | :----- |
 | **1986** | Berkeley Üniversitesi'nde POSTGRES projesi başlatıldı (Prof. Michael Stonebraker) |
 | **1996** | SQL desteği eklendi, isim PostgreSQL oldu |
 | **2005** | Windows desteği eklendi (v8.0) |
@@ -122,7 +122,7 @@ CREATE INDEX ON users USING bloom (email);
 ### PostgreSQL vs MySQL
 
 | Özellik | PostgreSQL | MySQL |
-|:--------|:-----------|:------|
+| :-------- | :----------- | :------ |
 | **ACID** | Tam destek | InnoDB'de var |
 | **JSON** | JSONB (binary, indexlenebilir) | JSON (text tabanlı) |
 | **Window Functions** | Tam destek | v8.0+ (sınırlı) |

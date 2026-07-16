@@ -78,7 +78,7 @@ PostgreSQL 11'den itibaren `PROCEDURE` desteği gelmiştir.
 ### Farkları
 
 | Özellik | Function | Procedure |
-|:--------|:---------|:----------|
+| :-------- | :--------- | :---------- |
 | Transaction Kontrolü | Yok | Var (`COMMIT`/`ROLLBACK` yapabilir) |
 | Geri Dönüş Değeri | Zorunlu (`RETURNS`) | Opsiyonel (`OUT` parametreler) |
 | Çağırma | `SELECT function()` | `CALL procedure()` |

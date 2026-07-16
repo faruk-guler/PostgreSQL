@@ -18,7 +18,7 @@ chmod 600 ~/.pgpass
 ### Meta-Komutlar (Backslash)
 
 | Komut | Açıklama |
-|:------|:---------|
+| :------ | :--------- |
 | `\l` | Veritabanlarını listele |
 | `\c dbname` | Veritabanına bağlan |
 | `\dt+` | Tabloları listele (boyut dahil) |
