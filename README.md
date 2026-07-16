@@ -1,5 +1,7 @@
 # PostgreSQL Master Guide
 
+<img src="./images/postgresql.webp" alt="Pg Preview" width="90%">
+
 **Yazar:** Faruk Guler www.farukguler.com
 
 ---
