@@ -1,4 +1,4 @@
-# PostgreSQL Master Guide
+# PostgreSQL Master Guide (For Systems Engineers and Senior DBAs)
 
 ![PostgreSQL Master Guide](./images/postgresql.webp)
 
