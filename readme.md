@@ -6,4 +6,4 @@
 
 ---
 
-PostgreSQL veritabanı yönetim sistemi hakkında kapsamlı Türkçe rehber serisi. Sıfırdan uzmanlık seviyesine (Zero to Hero) uzanan bu rehber, veritabanı mimarisinden dağıtık sistemlere kadar tüm modern gereksinimleri kapsar.
+PostgreSQL veritabanı yönetim sistemi hakkında kapsamlı Türkçe rehber serisi. Sıfırdan uzmanlık seviyesine (Zero to Hero) uzanan bu rehber, veritabanı mimarisinden dağıtık sistemlere kadar tüm modern gereksinimleri kapsamayı amaçlar.
