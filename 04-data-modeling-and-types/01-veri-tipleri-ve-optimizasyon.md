@@ -1,65 +1,120 @@
 # PostgreSQL Veri Tipleri ve Performans Optimizasyonu
 
-Veritabanı tasarımında (Schema Design) doğru veri tipini seçmek, yalnızca veri bütünlüğü (Data Integrity) için değil, aynı zamanda disk alanı tüketimi, bellek (RAM) kullanımı ve indeks (Index) performansı açısından da kritik bir öneme sahiptir. 
-
-PostgreSQL, SQL standartlarındaki temel tiplerin ötesinde, kompleks uygulamalar geliştirmeyi kolaylaştıran gelişmiş veri tipleri sunar.
+> **Bölüm Kapsamı:** Sayısal/Metinsel Tipler, `SERIAL` Saatli Bombası ve Integer Overflow, `GENERATED ALWAYS AS IDENTITY` Mimarisi, Parasal/Tarihsel Veriler ve Gelişmiş Tipler.
 
 ---
 
-## 1. Sayısal (Numeric) Veri Tipleri
+## 1. Sayısal (Numeric) Veri Tipleri ve Depolama
 
-| Veri Tipi | Boyut | Kullanım Senaryosu |
-| :--- | :--- | :--- |
-| `smallint` (int2) | 2 byte | Küçük tam sayılar (-32.768 ile +32.767). Performans ve yer tasarrufu için tercih edilmelidir (Örn: Durum kodları, yaş). |
-| `integer` (int4) | 4 byte | Varsayılan tam sayı tipi (-2.147 Milyar ile +2.147 Milyar). Genellikle ID ve sayaçlar için kullanılır. |
-| `bigint` (int8) | 8 byte | Çok büyük tam sayılar. Yüksek hacimli tablolarda Primary Key olarak kullanılması önerilir. |
-| `decimal` / `numeric` | Değişken | **Kesin (Exact)** rasyonel sayılar. Özellikle finansal (Para) hesaplamalarda küsurat kaybı (rounding error) yaşamamak için zorunludur. Performansı integer'a göre daha yavaştır. |
-| `real` / `double precision` | 4 / 8 byte | **Yaklaşık (Approximate)** ondalıklı sayılar. Bilimsel hesaplamalarda veya kesinliğin çok önemli olmadığı durumlarda hızı nedeniyle tercih edilir (Küsürat kaybı yaşanabilir). |
-| `serial` / `bigserial` | 4 / 8 byte | Otomatik artan (Auto-increment) ID oluşturmak için kullanılır. Arka planda bir `SEQUENCE` nesnesi yaratır. (Modern PostgreSQL'de bunun yerine `GENERATED ALWAYS AS IDENTITY` kullanımı tavsiye edilir). |
+| Veri Tipi | Boyut | Değer Aralığı | Kullanım Senaryosu / DBA Notu |
+| :--- | :--- | :--- | :--- |
+| `smallint` (int2) | 2 byte | -32.768 ile +32.767 | Durum kodları, ülke kodları, yaş. RAM ve disk tasarrufu sağlar. |
+| `integer` (int4) | 4 byte | -2.147 Milyar ile +2.147 Milyar | Standart ID ve sayaçlar. (Dikkat: Yüksek hacimli tablolarda risklidir!). |
+| `bigint` (int8) | 8 byte | -9 Trilyon ile +9 Trilyon | Finansal transaction ID, sipariş, log tabloları için zorunlu PK tipi. |
+| `decimal` / `numeric` | Değişken | 131.072 basamağa kadar | **Kesin (Exact)** rasyonel sayılar. Finans ve para hesaplamaları için zorunlu. |
+| `real` / `double precision` | 4 / 8 byte | 6 / 15 ondalık basamak | **Yaklaşık (Approximate)** ondalıklı sayılar. Bilimsel hesaplamalarda hızlıdır, yuvarlama farkı olabilir. |
 
 > [!WARNING]
-> Finansal verilerde **ASLA** `real` veya `float` (double precision) kullanmayın! `0.1 + 0.2 = 0.30000000000000004` gibi yuvarlama hatalarına neden olurlar. Parasal veriler için her zaman `numeric(precision, scale)` kullanın.
+> **Finansal Veri Kuralı:** Parasal işlemlerde **ASLA** `real` veya `double precision` (float) kullanmayın! IEEE 754 standardı nedeniyle `0.1 + 0.2 = 0.30000000000000004` küsurat farkı üretir. Parasal verilerde daima `numeric(precision, scale)` kullanılmalıdır.
 
 ---
 
-## 2. Metinsel (String) Veri Tipleri
+## 2. DBA'in Kâbusu: `SERIAL` Saatli Bombası (Integer Overflow)
 
-| Veri Tipi | Açıklama | Performans Etkisi |
+Yazılımcılar genellikle tablo oluştururken sorgulamadan `id SERIAL PRIMARY KEY` yazar.
+
+```sql
+-- ❌ SAATLİ BOMBA:
+CREATE TABLE siparisler (
+    id SERIAL PRIMARY KEY,
+    tutar NUMERIC(10,2)
+);
+```
+
+### Problem Nedir?
+1. `SERIAL`, arka planda 4-byte'lık bir **`integer` (int4)** tipi ve ona bağlı bir sequence oluşturur.
+2. `integer` veri tipinin alabileceği maksimum pozitif değer **`2.147.483.647`**'dir.
+3. Hızlı büyüyen bir e-ticaret, IoT veya fintech tablosunda sayaç bu sayıya ulaştığı an:
+   ```text
+   ERROR: integer out of range
+   ```
+   hatası fırlar ve **tüm INSERT işlemleri anında çöker**. Sistem durma noktasına gelir.
+4. 500 milyon veya 1 milyar satıra ulaşmış devasa bir tabloda `ALTER TABLE siparisler ALTER COLUMN id TYPE BIGINT;` komutu çalıştırmak tabloyu saatlerce `AccessExclusiveLock` ile kilitler; canlıda çalıştırılamaz!
+
+### `SERIAL`'ın Diğer Tasarım Kusurları
+* **SQL Standardı Değildir:** PostgreSQL'e özgü eski bir makrodur.
+* **Bypass Edilebilir:** Yazılımcı `INSERT INTO siparisler (id, tutar) VALUES (5, 100);` yazdığında `SERIAL` buna engel olamaz, sequence senkronizasyonu bozulur ve bir sonraki eklemede `duplicate key` hatası verir.
+* **Sequence İzin Karmaşası:** `SERIAL` ile açılan sequence nesnesi tablo yetkilerinden bağımsız kalabilir; tabloya `INSERT` yetkisi olan kullanıcı sequence üzerinde `USAGE` yetkisi olmadığı için hata alabilir.
+
+---
+
+## 3. Modern Çözüm: `GENERATED ALWAYS AS IDENTITY`
+
+PostgreSQL 10 ile birlikte SQL:2003 standardı olan **`IDENTITY`** sütunları çekirdeğe eklenmiştir. Modern PostgreSQL mimarisinde yeni açılan tüm tablolarda `SERIAL` yerine **`BIGINT ... AS IDENTITY`** kullanılmalıdır:
+
+```sql
+-- ✅ KURUMSAL VE STANDART ŞEMA TASARIMI:
+CREATE TABLE siparisler (
+    id BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) PRIMARY KEY,
+    tutar NUMERIC(10,2),
+    tarih TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### `ALWAYS` vs `BY DEFAULT` Farkı
+* **`GENERATED ALWAYS AS IDENTITY` (TAVSİYE EDİLEN):**
+  Uygulamanın elle ID değeri girmesini kesinlikle reddeder. Veri bütünlüğünü tam korur:
+  ```sql
+  -- Bu sorgu HATA verir (id elle girilemez):
+  INSERT INTO siparisler (id, tutar) VALUES (10, 250.00);
+  
+  -- Sadece ETL / Veri göçü gibi istisnai anlarda bilerek aşılabilir:
+  INSERT INTO siparisler (id, tutar) OVERRIDING SYSTEM VALUE VALUES (10, 250.00);
+  ```
+* **`GENERATED BY DEFAULT AS IDENTITY`:**
+  Eğer değer gönderilmezse otomatik üretir; değer gönderilirse kullanıcının girdiğini kabul eder.
+
+---
+
+## 4. Canlıda `SERIAL`'dan `IDENTITY`'ye Kesintisiz Migrasyon
+
+Mevcut bir `SERIAL` sütununu sistemi kilitlemeden modern `IDENTITY` yapısına geçirmek için sequence'i yeniden kullanabilirsiniz:
+
+```sql
+-- 1. Var olan sequence'in adını tespit et
+-- Genellikle: <tablo>_<kolon>_seq
+
+-- 2. Kolonu IDENTITY'ye bağla (Sequence sıfırlanmaz, kaldığı sayıdan devam eder)
+ALTER TABLE siparisler 
+    ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (SEQUENCE NAME siparisler_id_seq);
+```
+
+---
+
+## 5. Metinsel (String) Veri Tipleri
+
+| Veri Tipi | Açıklama | Performans ve Depolama |
 | :--- | :--- | :--- |
-| `char(n)` | Sabit uzunluklu. Veri kısa girilse bile sonunu boşlukla doldurup diski israf eder. | **Kullanımı önerilmez.** Disk alanını israf ettiği için I/O maliyeti yüksektir. |
-| `varchar(n)` | Değişken uzunluklu. Sadece girilen karakter kadar yer kaplar. | Maksimum uzunluk kısıtı (Limit) konması gereken yerlerde (`kullanici_adi varchar(50)`) tercih edilir. |
-| `text` | Sınırsız değişken uzunluklu metin. Sadece girilen kadar yer kaplar. | PostgreSQL altyapısında `text` ve `varchar(n)` aynı motoru (varlena) kullanır. Performans farkı sıfırdır. |
+| `char(n)` | Sabit uzunluklu metin. Kısa veri girilse bile boşluk basar. | **Kullanılmamalıdır.** Boşluklarla diski israf eder. |
+| `varchar(n)` | Karakter sınırı olan değişken uzunluklu metin. | Sadece iş kuralı limiti gerektiğinde kullanılmalıdır. |
+| `text` | Sınırsız değişken uzunluklu metin. | **Önerilen standart.** Sadece girilen kadar yer kaplar. |
 
 > [!TIP]
-> Diğer veritabanlarının (MySQL vb.) aksine PostgreSQL'de `text` ile `varchar(n)` arasında hız farkı **yoktur**. İkisi de arka planda aynı veri yapısını kullanır. Metin sınırını veritabanında zorlamak istemiyorsanız her yerde `text` kullanabilirsiniz.
+> PostgreSQL'de `text` ile `varchar(n)` arka planda aynı `varlena` yapısını kullanır. Aralarında 1 milisaniye dahi hız farkı **yoktur**.
 
 ---
 
-## 3. Tarih ve Zaman (Date / Time)
+## 6. Tarih ve Zaman (Date / Time)
 
-Tarihsel hesaplamaların (Örn: Bu faturanın son ödeme tarihi geçti mi?) veri bütünlüğünü bozmadan yapılabilmesi için doğru tip şarttır.
-
-*   **`date`**: Sadece tarihi tutar (Yıl-Ay-Gün).
-*   **`timestamp`**: Tarih + Saat bilgisini tutar.
-*   **`timestamp with time zone` (timestamptz)**: Tarih + Saat + **Zaman Dilimi (Timezone)** bilgisini tutar. Küresel (Global) uygulamalar geliştirirken kesinlikle `timestamptz` kullanmalısınız. Aksi takdirde, Amerika'dan bağlanan kullanıcı ile Türkiye'den bağlanan kullanıcı aynı saati farklı yorumlar.
-*   **`interval`**: Bir zaman aralığını tutar (Örn: `3 days 14 hours`). Tarih toplama/çıkarma işlemlerinde çok güçlüdür (`current_date + interval '1 week'`).
+* **`date`**: Yalnızca tarih (Yıl-Ay-Gün).
+* **`timestamp with time zone` (`timestamptz`):** Tarih + Saat + UTC dönüşümü.
+  * **Kritik Kural:** Dağıtık ve çok kullanıcılı sistemlerde her zaman `timestamptz` kullanılmalıdır. PostgreSQL veriyi diskte UTC olarak saklar; okurken istemcinin `timezone` parametresine göre yerel saate dönüştürür.
+* **`interval`**: İki tarih arasındaki farkı veya süreyi tutar (`interval '14 days'`).
 
 ---
 
-## 4. Gelişmiş PostgreSQL Tipleri
+## 7. Gelişmiş PostgreSQL Tipleri
 
-### JSON ve JSONB (NoSQL Yetenekleri)
-PostgreSQL'i hibrit bir veritabanı (RDBMS + NoSQL) yapan en güçlü özelliktir.
-
-*   **`json`**: Veriyi tam olarak gönderdiğiniz formatta (boşluklar dahil) metin olarak (Text) kaydeder. Her sorguladığınızda verinin baştan ayrıştırılması (Parsing) gerekir (Yavaştır).
-*   **`jsonb`**: Veriyi arka planda **Binary** formatta parse ederek kaydeder. Yazarken çok hafif yavaştır ama **okurken ve sorgularken (Index desteği - GIN) devasa bir performans farkı yaratır**. Boşlukları ve gereksiz detayları atar. Uygulamalarınızda her zaman `jsonb` kullanın.
-
-### ENUM (Sıralı Tip)
-Sadece önceden belirlenmiş sabit değerlerin girilmesini (Örn: Sipariş durumu -> `bekliyor`, `kargolandi`, `teslim_edildi`) veritabanı seviyesinde zorunlu kılar. Yanlış veri girilmesini engeller ve `text` yerine tam sayı sakladığı için diskten ve bellekten tasarruf sağlar.
-
-### ARRAY (Diziler)
-Bir kolonda birden fazla veri tutmanızı sağlar (Örn: `tagler text[]`). İlişkisel tasarıma (Normalization) aykırı görünse de, ayrı bir tablo oluşturmanın (JOIN maliyeti) gereksiz olduğu basit çoklu değerlerde çok etkilidir.
-
-### OID, UUID ve Network Tipleri
-*   **UUID:** Evrensel benzersiz kimlik (GUID). Dağıtık mimarilerde ID çakışmasını engellemek için mükemmeldir.
-*   **inet / cidr:** IP adreslerini ve ağ maskelerini saklamak için düz metin (`varchar`) yerine bunlar kullanılmalıdır. Hatalı IP girişini engeller ve "Bu IP, şu blokun içinde mi?" (Subnetting) sorgularını donanımsal hızda yapar.
+* **`jsonb` (Binary JSON):** Veriyi binary olarak ayrıştırıp saklar. GIN indeks desteği sayesinde NoSQL hızında JSON sorgulamayı mümkün kılar.
+* **`inet` / `cidr`:** IP adreslerini (IPv4/IPv6) ve alt ağ maskelerini saklar. İndekslenebilir ve hatalı IP girişini veritabanı seviyesinde engeller.
+* **`UUID`:** Özellikle `UUIDv7` formatı kullanıldığında B-Tree indeksinde parçalanma yapmayan mükemmel dağıtık birincil anahtardır.

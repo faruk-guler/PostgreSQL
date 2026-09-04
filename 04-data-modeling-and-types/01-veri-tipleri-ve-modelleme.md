@@ -394,10 +394,77 @@ Modern kurumsal mimarilerde en çok tercih edilen bulut standardıdır:
 
 ---
 
+## 12. İleri Düzey Bütünlük Kısıtları (Constraints) ve Erteleme Mimarisi
+
+İlişkisel veritabanlarında veri bütünlüğünü uygulama koduna bırakmak (ORM katmanı vb.) veri kirlenmesine yol açar. PostgreSQL, motor seviyesinde çok gelişmiş kısıtlar sunar:
+
+### a. `DEFERRABLE INITIALLY DEFERRED` (Kısıt Kontrolünü Erteleme)
+
+Standart bir `Foreign Key` veya `UNIQUE` kısıtı, satır eklendiği an kontrol edilir. Eğer iki tablo birbirine karşılıklı referans veriyorsa (Döngüsel Bağımlılık / Circular FK) veya toplu bir ETL veri yüklemesi yapılıyorsa satırlar eklenemez:
+
+```sql
+-- Kısıtı transaction bitimine (COMMIT anına) erteleyen tanım:
+CREATE TABLE siparis_kalemleri (
+    id BIGINT PRIMARY KEY,
+    siparis_id BIGINT,
+    tutar NUMERIC(10,2),
+    CONSTRAINT fk_siparis 
+        FOREIGN KEY (siparis_id) REFERENCES siparisler(id)
+        DEFERRABLE INITIALLY DEFERRED
+);
+```
+* **DBA Kazanımı:** Satır eklenirken foreign key anında kontrol edilmez. Transaction içinde tüm veriler yüklendikten sonra `COMMIT` anında topluca kontrol edilir. Böylece döngüsel işlemler kilitlenmeden tamamlanır.
+
+---
+
+### b. `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+ Tekil NULL Çözümü)
+
+SQL standardına göre `NULL != NULL` olduğu için, klasik bir `UNIQUE` kolonunda **birden fazla `NULL` değer bulunabilir**:
+
+```sql
+-- ❌ Eski Davranış:
+CREATE TABLE abonelikler (
+    id SERIAL PRIMARY KEY,
+    vergi_no TEXT UNIQUE -- Birden fazla satır NULL olabilir!
+);
+```
+
+PostgreSQL 15 ile gelen `NULLS NOT DISTINCT` sözdizimi, `NULL` değerlerin de tıpkı diğer veriler gibi tekil olmasını sağlar:
+
+```sql
+-- ✅ PostgreSQL 15+ İle Sadece 1 Adet NULL Değere İzin Ver:
+CREATE TABLE abonelikler (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    vergi_no TEXT UNIQUE NULLS NOT DISTINCT
+);
+-- Artık vergi_no'su NULL olan 2. satır eklenemez (Unique violation hatası verir).
+```
+
+---
+
+### c. `CHECK` Kısıtları ve Veri Doğrulama
+
+Uygulamanın mantıksız veri basmasını (örneğin negatif tutar, bitiş tarihinin başlangıçtan önce olması) donanımsal düzeyde engeller:
+
+```sql
+CREATE TABLE sozlesmeler (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    baslangic_tarihi DATE NOT NULL,
+    bitis_tarihi DATE NOT NULL,
+    aylik_ucret NUMERIC(10,2) NOT NULL,
+    CONSTRAINT chk_tarih_tutarliligi CHECK (bitis_tarihi >= baslangic_tarihi),
+    CONSTRAINT chk_pozitif_ucret CHECK (aylik_ucret > 0)
+);
+```
+
+---
+
 ## Best Practices
 
-1. **Doğru Tipi Seçin:** Tarih için `DATE`, para için `NUMERIC(10,2)`, binary için küçük dosyalarda `BYTEA`, büyük dosyalarda S3 + URL tercih edin.
-2. **Generated Columns:** Hesaplanabilir veriler için Application tarafı yerine veritabanı özelliğini kullanın.
-3. **ENUM dikkatli kullanın:** Değer eklemek kolaydır ama silmek zordur (pg_enum'dan manuel müdahale gerekir).
-4. **Array'leri aşırı kullanmayın:** Normalleştirme genellikle daha iyidir. Ancak etiketler veya küçük listeler için uygundur.
-5. **UUID için v7 tercih edin:** İndex verimliliği için sıralı UUID'ler (v7) daha iyidir.
+1. **Doğru Tipi Seçin:** Tarih için `DATE`, saat ve zaman dilimi için `TIMESTAMPTZ`, para için `NUMERIC(10,2)`, binary için küçük dosyalarda `BYTEA`, büyük dosyalarda S3 + URL tercih edin.
+2. **SERIAL Yerine IDENTITY:** Yeni tablolarda `SERIAL` yerine `BIGINT GENERATED ALWAYS AS IDENTITY` tercih edin.
+3. **Kısıtları DB Seviyesinde Tutun:** Negatif sayılar ve tutarsız tarihler için `CHECK`, tekil NULL ihtiyaçlarında `NULLS NOT DISTINCT` kullanın.
+4. **Generated Columns:** Hesaplanabilir veriler için Application tarafı yerine veritabanı özelliğini (`STORED`) kullanın.
+5. **ENUM dikkatli kullanın:** Değer eklemek kolaydır ama silmek zordur (pg_enum'dan manuel müdahale gerekir).
+6. **UUID için v7 tercih edin:** İndex verimliliği için sıralı UUID'ler (v7) daha iyidir.
+
