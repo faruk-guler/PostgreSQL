@@ -1,9 +1,0 @@
-allowed-parameter-info:
-  - type
-  - showDefault
-  - min
-  - max
-  - unit
-  - context
-  - values
-  - restart
