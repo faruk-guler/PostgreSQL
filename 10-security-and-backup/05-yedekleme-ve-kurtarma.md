@@ -4,59 +4,130 @@
 
 ---
 
-## 1. Logical Backups (pg_dump)
+## 1. Logical Backups (pg_dump ve pg_dumpall)
 
-SQL komutları (`CREATE TABLE`, `INSERT INTO`...) şeklinde alınan yedektir.
+SQL komutları (`CREATE TABLE`, `COPY`, `INSERT INTO`...) şeklinde alınan mantıksal yedektir.
 
-- **Kullanım:** Küçük/Orta ölçekli veritabanları, sürüm yükseltme (Major Upgrade) veya belirli tabloları almak için idealdir.
-- **Dezavantaj:** Veri boyutu büyüdükçe (TB seviyesi) yedeği geri yüklemek (`RESTORE`) çok uzun sürer.
+- **Kullanım:** Küçük/Orta ölçekli veritabanları, majör sürüm yükseltme (Major Upgrade - örn. PG 15 -> 17), veri aktarımı veya belirli tablo/şemaları taşımak için idealdir.
+- **Çalışma Prensibi ve Kilitler:** `pg_dump`, yedek almaya başladığı anda veritabanının bir anlık görüntüsünü (snapshot) tek bir `REPEATABLE READ` transaction içinde dondurur. Yedeklenecek tablolarda **`ACCESS SHARE`** kilidi talep eder. Bu kilit okuma ve yazma (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) işlemlerini **engellemez**; yalnızca tablo yapısını değiştirecek DDL (`ALTER TABLE`, `DROP TABLE`, `VACUUM FULL`) işlemlerini bekletir.
+- **Dezavantaj:** Veri boyutu büyüdükçe (yüzlerce GB veya TB) veri yükleme (`RESTORE`) ve indekslerin baştan inşa süresi çok uzar. Incremental (fark) yedek alamaz.
 
-### pg_dump ile Yedek Alma
+### pg_dump Formatları ve Parametreleri
 
-```bash
-# Standart "Plain Text" SQL yedeği (Okunabilir ama yavaştır)
-pg_dump -U postgres my_database > backup.sql
+`pg_dump` varsayılan olarak verileri hızlı yükleme sağlayan `COPY` formatında üretir.
 
-# "Custom Format" (Sıkıştırılmış, Esnek - TAVSİYE EDİLEN)
-# -F c: Custom format
-# -f: Output file
-pg_dump -U postgres -F c -f my_database.dump my_database
-
-# Paralel yedek için Directory format kullanın:
-# -F d: Directory format
-# -j 4: 4 CPU çekirdeği kullanarak paralel yedek al
-pg_dump -U postgres -F d -f my_database_dir -j 4 my_database
-```
-
-### pg_restore ile Geri Yükleme
-
-"Custom Format" yedeğin en büyük avantajı, içinden istediğiniz parçayı seçebilmenizdir.
+| Format | Parametre | Açıklama |
+| :--- | :--- | :--- |
+| **Plain Text** | `-F p` | Standart SQL metin dosyası. `psql` ile yüklenir. Sürüm kontrolüne atılabilir, ancak `pg_restore` ile seçici yüklenemez. |
+| **Custom** | `-F c` | **Önerilen kurumsal format.** Otomatik sıkıştırılmış ikili (binary) formattır. Yalnızca `pg_restore` ile açılır; tablo ve şema bazında filtrelenebilir. |
+| **Directory** | `-F d` | Çıktıyı bir dizin altına her tablo için ayrı dosyalar halinde yazar. `-j` parametresi ile **paralel yedekleme** destekler. |
+| **Tar** | `-F t` | UNIX tar arşividir. Custom formata göre üstünlüğü yoktur, boyutu büyüktür ve paralel çalışamaz; kullanımı önerilmez. |
 
 ```bash
-# Tüm veritabanını geri yükle (Database önceden yaratılmış olmalı)
-pg_restore -U postgres -d new_database my_database.dump
+# 1. Custom Format ile tam veritabanı yedeği (-f veya >)
+pg_dump -h localhost -U postgres -d e_commerce -F c -f /backup/ecommerce_$(date +%F).dump
 
-# Sadece "users" tablosunu geri yükle
-pg_restore -U postgres -d new_database -t users my_database.dump
+# 2. Çok çekirdekli paralel yedek alma (Directory Format + 4 İş Parçacığı)
+pg_dump -h localhost -U postgres -d e_commerce -F d -j 4 -f /backup/ecommerce_dir_backup
 
-# Sadece şema yapısını (Data yok) geri yükle
-pg_restore -U postgres -d new_database --schema-only my_database.dump
+# 3. Belirli şemaları ve tabloları filtreleme (Düzenli ifade / Regex destekler)
+# Sadece "crm" ve "accounting" şemaları
+pg_dump -U postgres -d e_commerce -n 'crm' -n 'accounting' -F c -f /backup/crm_acc.dump
+
+# Belirli bir tabloyu yedeğe dahil etme (-t) veya hariç tutma (-T)
+pg_dump -U postgres -d e_commerce -t 'public.orders_*' -T 'public.orders_archive_*' -F c -f /backup/active_orders.dump
+
+# 4. Geri yüklemede tabloyu baştan temizleme (-c / --clean ve --if-exists)
+pg_dump -U postgres -d e_commerce -c --if-exists -F c -f /backup/clean_ecommerce.dump
 ```
-
-> [!WARNING]
-> `pg_dump`, kullanıcıları (roles) ve grupları YEDEKLEMEZ! Bunlar "Global" nesnelerdir.
-> Bunları almak için `pg_dumpall --globals-only` kullanın.
 
 ---
 
-## 2. Physical Backups (pg_basebackup)
+### pg_dumpall: Küme Düzeyinde Mantıksal Yedek
 
-Veritabanı dosyalarının (`base/`, `global/`) birebir kopyasını alır.
+`pg_dumpall`, kümedeki tüm veritabanlarını ve veritabanı bağımsız **global nesneleri** (kullanıcı rolleri, şifre hash'leri, yetkiler, tablespace tanımları) tek bir adımda yedekler.
 
-- **Kullanım:** Büyük veritabanları, Replikasyon kurulumu ve PITR (Point-In-Time Recovery) için zorunludur.
-- **Avantaj:** Geri yükleme hızı disk kopyalama hızı kadardır (Çok hızlı).
+> [!IMPORTANT]
+> `pg_dump` kullanıcıları ve rolleri YEDEKLEMEZ! Tek bir veritabanını kurtarırken roller eksikse yükleme yetki hatalarıyla çöker. Bu yüzden global nesneleri ayrı almak zorunludur:
+>
+> ```bash
+> # Sadece rolleri ve tablespace'leri (global nesneleri) metin olarak al
+> pg_dumpall -U postgres -g > /backup/globals_$(date +%F).sql
+> 
+> # Ya da sadece rolleri almak için:
+> pg_dumpall -U postgres -r > /backup/all_roles.sql
+> 
+> # Ya da sadece tablespace tanımları için:
+> pg_dumpall -U postgres -t > /backup/all_tablespaces.sql
+> ```
+> 
+> **En İyi Pratik:** `pg_dumpall` yalnızca düz metin (plain text) çıktısı verdiği için tüm kümenin büyük verisini onunla almak pratik değildir. Kurumsal yedekleme stratejisinde önce `pg_dumpall -g` ile global nesneler metin olarak saklanır; ardından her bir veritabanı `pg_dump -F c` ile ayrı ayrı sıkıştırılmış ikili formatta yedeklenir.
 
-### pg_basebackup Kullanımı
+---
+
+### pg_restore: Seçici ve Paralel Geri Yükleme
+
+`-F c` veya `-F d` ile alınan yedekler `pg_restore` ile olağanüstü bir esneklikle yönetilir:
+
+```bash
+# 1. Yedeğin içindekileri yüklemeden listeleme / inceleme (-l)
+pg_restore -l /backup/ecommerce.dump | less
+
+# 2. Tam geri yükleme (-d hedef veritabanı)
+pg_restore -U postgres -d new_db -v /backup/ecommerce.dump
+
+# 3. Seçici geri yükleme: Sadece tek bir tabloyu veya şemayı yükleme
+pg_restore -U postgres -d new_db -t customers /backup/ecommerce.dump
+pg_restore -U postgres -d new_db -n crm /backup/ecommerce.dump
+
+# 4. Yalnızca Şema (-s) veya Yalnızca Veri (-a) yükleme
+pg_restore -U postgres -d test_db --schema-only /backup/ecommerce.dump
+pg_restore -U postgres -d test_db --data-only -t customers /backup/ecommerce.dump
+
+# 5. PARALEL RESTORE (-j): Süreyi dramatik şekilde düşürür!
+# Verileri ve ardından indeksleri aynı anda birden fazla CPU iş parçacığıyla oluşturur
+time pg_restore -U postgres -d new_db -j 4 /backup/ecommerce.dump
+```
+
+> [!NOTE]
+> **Paralel Geri Yükleme Performans Kazancı:**
+> 100 milyon satırlık bir tabloda yapılan tek iş parçacıklı (`-j 1`) geri yükleme 7 dakika 30 saniye sürerken; 4 çekirdekli bir sunucuda `-j 4` parametresiyle paralel restore yapıldığında süre 2 dakikanın altına iner.
+
+---
+
+## 2. Physical Backups (Fiziksel Yedekleme)
+
+Veritabanının disk üzerindeki bloklarını ve dosyalarını (`base/`, `global/`, `pg_wal/`) bayt seviyesinde kopyalar.
+
+### A. pg_basebackup
+Canlı (Hot) çalışan veritabanında kesinti olmadan fiziksel tam yedek alır.
+- **Avantaj:** Geri yükleme hızı disk I/O hızına bağlıdır; indeksleri sıfırdan hesaplamaz, doğrudan hazır açılır. Replikasyon slave kurulumunun ve PITR sürecinin temelidir.
+
+```bash
+# Standart Base Backup alma
+# -h: Host, -D: Hedef klasör (boş olmalı)
+# -F p: Düz dosya kopyası (veya -F t: tar formatı)
+# -X stream: Yedekleme esnasında üretilen WAL dosyalarını eşzamanlı çek
+# -c fast: Checkpoint'i anında tetikle (beklemesin)
+# -P: İlerleme durumunu göster (Progress)
+pg_basebackup -h 192.168.1.10 -U replicator -D /backup/base_$(date +%F) -F p -X stream -c fast -P
+```
+
+### B. Dosya Sistemi Seviyesinde Yedekleme (File System Level) ve Riskleri
+PostgreSQL veri dizinini (`$PGDATA`) doğrudan işletim sistemi komutlarıyla (`tar`, `cp`, `rsync`) kopyalamak mümkündür; ancak çok kritik kurallar vardır:
+
+```bash
+# Tehlikeli / Yanıltıcı Yöntem (PostgreSQL çalışırken ham tar almak):
+tar -czvf /tmp/corrupted_pgdata.tar.gz /var/lib/postgresql/data/ # BOZUK VERİ RİSKİ!
+```
+
+> [!CAUTION]
+> **Veri Bütünlüğü Uyarısı:**
+> PostgreSQL bellekteki dirty buffer'ları sürekli diske yazar. Servis canlıyken düz `tar` veya `cp` komutu çalıştırılırsa, kopyalanan dosyaların bir kısmı sayfa yazımının ortasında (torn write) yakalanır ve yedek **tutarsız (inconsistent) ve açılamaz** hale gelir.
+> 
+> **Doğru Uygulama:**
+> 1. Ya PostgreSQL servisi tamamen durdurulmalı (`systemctl stop postgresql` - Soğuk Yedek),
+> 2. Ya da `pg_backup_start('etiket')` fonksiyonu çalıştırılıp dosya kopyalaması bittikten sonra `pg_backup_stop()` çağrılmalı ve ilgili aralıktaki tüm WAL dosyaları arşivlenmelidir (pg_basebackup bunu arka planda otomatik ve güvenli yapar).
 
 ```bash
 # -h: Host
@@ -262,6 +333,104 @@ C diliyle sıfırdan yazılmış, olağanüstü performanslı modern endüstri s
 > **Hangi Aracı Seçmelisiniz?**
 > - Veri hacminiz terabaytlar seviyesindeyse, Kubernetes/Cloud kullanıyorsanız ve kurtarma sürenizi (RTO) en aza indirmek istiyorsanız **pgBackRest** bir numaralı tercihtir.
 > - On-premise veri merkezinde tek bir sunucudan çok sayıda bağımsız sanal makineyi merkezi olarak yedeklemek ve `pg_receivewal` ile streaming WAL toplamak istiyorsanız **Barman** güçlü bir alternatiftir.
+
+---
+
+### d. Uygulamalı pgBackRest Kurulum ve PITR Rehberi
+
+Aşağıda **DB Sunucusu** (`192.168.1.10`) ile bağımsız **Yedek Sunucusu** (`192.168.1.20`) arasındaki üretim mimarisi adım adım verilmiştir:
+
+#### 1. Karşılıklı Parolasız SSH Yetkilendirmesi
+pgBackRest'in iki sunucu arasında güvenli veri ve komut taşıması için `postgres` sistem kullanıcısı düzeyinde anahtar tabanlı SSH gerekir:
+
+```bash
+# Hem DB hem Yedek sunucusunda 'postgres' kullanıcısıyla:
+su - postgres
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+
+# DB sunucusunun genel anahtarını Yedek sunucusuna ekleyin:
+# ~/.ssh/authorized_keys dosyasının izinleri 600 olmalıdır:
+chmod 600 ~/.ssh/authorized_keys
+```
+
+#### 2. `/etc/pgbackrest.conf` Yapılandırması
+
+*Yedek Sunucusunda (`192.168.1.20`):*
+```ini
+[global]
+repo1-path=/var/lib/pgbackrest
+repo1-retention-full=2
+process-max=4
+log-level-console=info
+log-level-file=detail
+
+[prod_cluster]
+pg1-path=/var/lib/postgresql/16/main
+pg1-host=192.168.1.10
+pg1-user=postgres
+```
+
+*Veritabanı Sunucusunda (`192.168.1.10`):*
+```ini
+[global]
+repo1-host=192.168.1.20
+repo1-user=postgres
+log-level-console=info
+
+[prod_cluster]
+pg1-path=/var/lib/postgresql/16/main
+```
+
+#### 3. PostgreSQL Arşivleme Ayarları (`postgresql.conf` veya `ALTER SYSTEM`)
+```sql
+ALTER SYSTEM SET archive_mode = 'on';
+ALTER SYSTEM SET archive_command = 'pgbackrest --stanza=prod_cluster archive-push %p';
+ALTER SYSTEM SET wal_level = 'replica';
+ALTER SYSTEM SET max_wal_senders = 10;
+```
+*Ayarların geçerli olması için PostgreSQL servisini yeniden başlatın (`systemctl restart postgresql`).*
+
+#### 4. Stanza Oluşturma ve Sağlık Kontrolü
+Yedek sunucusunda stanza'yı başlatıp WAL aktarım hattını test edin:
+
+```bash
+# Stanza metadata'sını oluştur
+pgbackrest --stanza=prod_cluster stanza-create
+
+# Bağlantı ve arşivleme testi (OK dönmeli)
+pgbackrest --stanza=prod_cluster check
+```
+
+#### 5. Yedek Alma ve Cron Otomasyonu
+```bash
+# Manuel Tam (Full) Yedek:
+pgbackrest --stanza=prod_cluster --type=full backup
+
+# Cron Tanımı (/etc/cron.d/pgbackrest):
+# Her Pazar gece 02:00'de Full Yedek, hafta içi Diff Yedek:
+0 2 * * 0 postgres pgbackrest --stanza=prod_cluster --type=full backup
+0 2 * * 1-6 postgres pgbackrest --stanza=prod_cluster --type=diff backup
+```
+
+#### 6. pgBackRest ile Felaketten Kurtarma (PITR)
+Bir veri kaybı veya yanlış tablo silinmesi anında, yedek sunucusu üzerinden hedef veritabanı sunucusuna zaman hedefli geri yükleme:
+
+```bash
+# 1. DB sunucusunda PostgreSQL servisini durdurun ve veri dizinini temizleyin
+systemctl stop postgresql
+rm -rf /var/lib/postgresql/16/main/*
+
+# 2. Yedek sunucusundan hedef zamana (Time Target) PITR Restore tetikleyin:
+pgbackrest --stanza=prod_cluster \
+  --delta \
+  --type=time \
+  --target="2026-09-14 12:45:00" \
+  --target-action=promote \
+  restore
+
+# 3. PostgreSQL'i başlatın
+systemctl start postgresql
+```
 
 ---
 

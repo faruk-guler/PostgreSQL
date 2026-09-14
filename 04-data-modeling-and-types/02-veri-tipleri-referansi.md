@@ -17,7 +17,7 @@ PostgreSQL, SQL standartlarının sunduğu temel veri tiplerinin çok ötesinde,
 | **bigint** (`int8`) | 8 bayt | Çok büyük tam sayılar (~9 kentilyon aralığında) |
 | **numeric** / **decimal** | Değişken | Tam hassasiyetli sayı (arbitrary precision); para ve finansal hesaplar için |
 | **real** (`float4`) | 4 bayt | Tek hassasiyetli kayan noktalı sayı (6 ondalık basamak hassasiyeti) |
-| **double precision** (`float8`)| 8 bayt | Çift hassasiyetli kayan noktalı sayı (15 ondalık basamak hassasiyeti) |
+| **double precision** (`float8`) | 8 bayt | Çift hassasiyetli kayan noktalı sayı (15 ondalık basamak hassasiyeti) |
 | **smallserial** / **serial** / **bigserial** | 2/4/8 bayt | Otomatik artan tam sayılar (arka planda Sequence nesnesi oluşturur) |
 | **money** | 8 bayt | Para birimi miktarı ($ veya yerel para simgeli, 2 ondalıklı) |
 
@@ -56,7 +56,7 @@ PostgreSQL, SQL standartlarının sunduğu temel veri tiplerinin çok ötesinde,
 | **boolean** (`bool`) | 1 bayt | Mantıksal değer: `TRUE`, `FALSE`, `NULL` (üç değerli mantık) |
 | **bytea** | Değişken | Ham ikili veri (resim, ses, şifreli veri blokları) |
 | **bit(n)** | `n` bit | Sabit uzunluklu bit dizgisi (`B'10101'`) |
-| **bit varying(n)** (`varbit(n)`)| Değişken | Değişken uzunluklu bit dizgisi |
+| **bit varying(n)** (`varbit(n)`) | Değişken | Değişken uzunluklu bit dizgisi |
 
 ---
 
@@ -173,7 +173,40 @@ Bu tipler bir tablonun sütun tipi olarak kullanılamaz; fonksiyon parametreleri
 
 ---
 
-## 13. PostgreSQL Özel Operatör ve Fonksiyon Kataloğu
+## 14. Otomatik Artan (Auto-Increment) ve Sequence'ler
+
+### SERIAL vs IDENTITY
+
+PostgreSQL'de otomatik artan kolonlar için iki farklı yaklaşım vardır:
+
+1. **`SERIAL` / `BIGSERIAL` (Geleneksel):** Arka planda bağımsız bir `SEQUENCE` nesnesi oluşturur. Sütun manuel olarak override edilebilir (Örn: `INSERT INTO tablo (id) VALUES (99);`).
+2. **`GENERATED ALWAYS AS IDENTITY` (Modern SQL Standardı - PG 10+):** Doğrudan tabloyla bütünleşiktir ve manuel ID verilmesini katı bir şekilde reddeder. Veri bütünlüğü açısından **önerilen modern yaklaşımdır**.
+
+```sql
+CREATE TABLE ogrenciler (
+    id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, -- Modern standart
+    eski_id serial                                  -- Eski PG standardı
+);
+```
+
+---
+
+## 15. Sayısal Tiplerde Yuvarlama Davranışları (Rounding)
+
+Küsüratlı (Floating) işlemlerde `NUMERIC` ile `DOUBLE PRECISION` farklı yuvarlama (round) algoritmaları kullanır.
+
+- **`NUMERIC` / `DECIMAL`:** Standart finansal yuvarlama (Round half away from zero). 0.5 ve üzeri bir üst sayıya yuvarlanır.
+- **`DOUBLE PRECISION` / `REAL`:** Bilimsel/IEEE 754 yuvarlaması (Round half to even). 0.5 tam ortadaysa, en yakın **çift** tam sayıya yuvarlanır.
+
+```sql
+SELECT 
+  round(2.5::numeric),           -- Sonuç: 3  (Finansal yuvarlama)
+  round(2.5::double precision);  -- Sonuç: 2  (Çift sayıya yuvarlama)
+```
+
+---
+
+## 16. PostgreSQL Özel Operatör ve Fonksiyon Kataloğu
 
 PostgreSQL, zengin tip ekosistemini destekleyen geniş bir yerleşik operatör ve fonksiyon kütüphanesine sahiptir. Sistemdeki tüm operatörleri `\do`, fonksiyonları ise `\df` komutlarıyla psql üzerinden listeleyebilirsiniz.
 
@@ -224,4 +257,3 @@ Ham ikili verileri (hash, kriptografik anahtarlar, dosya blokları) işlemek iç
 - `decode('string', 'hex' | 'base64')`: Hex veya Base64 metni ham `bytea` formatına dönüştürür.
 - `sha256(bytea)` / `sha512(bytea)`: Kriptografik özet hesaplar.
 - `get_byte(bytea, offset)` ve `set_byte(bytea, offset, new_value)`: İkili dizi üzerindeki belirli baytı okur veya değiştirir.
-

@@ -28,20 +28,20 @@ Tetikleyiciler çalışma zamanına göre üçe ayrılır:
 
 ## 2. Tetikleyici Özel Değişkenleri
 
-PL/pgSQL bir tetikleyici fonksiyonu içindeyken sisteme dair bilgileri otomatik olarak bazı özel değişkenlere doldurur:
+PL/pgSQL bir tetikleyici fonksiyonu içindeyken sisteme dair bilgileri otomatik olarak bazı özel değişkenlere doldurur. (Kapsamlı liste):
 
-| Değişken | Açıklama | Hangi İşlemde Doludur? |
-| :--- | :--- | :--- |
-| **`NEW`** | Tabloya eklenecek/güncellenecek **yeni** satırın verilerini tutan `RECORD`. | `INSERT`, `UPDATE` |
-| **`OLD`** | Tablodan silinecek veya güncellenmeden önceki **eski** satırın verilerini tutar. | `UPDATE`, `DELETE` |
-| **`TG_OP`** | Tetikleyicinin hangi işlem sonucu çağrıldığını tutar. | Tümü (Değeri: 'INSERT', 'UPDATE', 'DELETE' veya 'TRUNCATE') |
-| **`TG_TABLE_NAME`** | Tetikleyicinin bağlandığı tablonun adı. | Tümü |
-
----
-
-## 3. Örnek: Audit Logging (Değişiklik Tarihçesi) Tutma
-
-Veritabanlarındaki en klasik trigger uygulamasıdır. `personel` tablosunda yapılan her işlemi `personel_log` tablosuna kaydedelim.
+| Değişken | Veri Tipi | Açıklama | Hangi İşlemde Doludur? |
+| :--- | :--- | :--- | :--- |
+| **`NEW`** | `RECORD` | Tabloya eklenecek/güncellenecek **yeni** satırın verilerini tutar. | `INSERT`, `UPDATE` |
+| **`OLD`** | `RECORD` | Tablodan silinecek veya güncellenmeden önceki **eski** satırın verilerini tutar. | `UPDATE`, `DELETE` |
+| **`TG_OP`** | `TEXT` | Tetikleyicinin hangi işlem sonucu çağrıldığını tutar. | Tümü ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE') |
+| **`TG_TABLE_NAME`** | `NAME` | Tetikleyicinin bağlandığı tablonun adı. | Tümü |
+| **`TG_TABLE_SCHEMA`** | `NAME` | Tetikleyicinin bağlandığı tablonun şema adı. | Tümü |
+| **`TG_WHEN`** | `TEXT` | Tetikleyicinin zamanlaması ('BEFORE', 'AFTER', 'INSTEAD OF'). | Tümü |
+| **`TG_LEVEL`** | `TEXT` | Tetikleyici seviyesi ('ROW' veya 'STATEMENT'). | Tümü |
+| **`TG_NARGS`** | `INTEGER` | Tetikleyici fonksiyonuna `CREATE TRIGGER` ile geçirilen argüman sayısı. | Tümü |
+| **`TG_ARGV[]`** | `TEXT[]` | Tetikleyici fonksiyonuna geçirilen argümanların dizisi (Örn: `TG_ARGV[0]`). | Tümü |
+| **`TG_RELID`** | `OID` | Tetiklenen tablonun sistem nesne kimliği (Object ID). | Tümü |
 
 ### 1. Log Tablosunu Oluşturalım
 ```sql
@@ -107,3 +107,22 @@ FOR EACH ROW EXECUTE FUNCTION maas_kontrolu();
 ```
 > [!CAUTION]
 > `BEFORE` tetikleyicilerinde mutlaka `RETURN NEW;` yapmalısınız (Insert ve Update için). Eğer `RETURN NULL;` derseniz, PostgreSQL işlemi sessizce iptal eder ve kayıt tabloya **yazılmaz**.
+
+---
+
+## 5. View'lar İçin INSTEAD OF Tetikleyicileri
+
+Normal şartlarda birden fazla tabloyu JOIN eden kompleks bir `VIEW` üzerine `INSERT`, `UPDATE` veya `DELETE` yapılamaz. Ancak `INSTEAD OF` tetikleyicisi yazarak gelen isteği yakalayıp asıl tablolara manuel olarak dağıtabilirsiniz:
+
+```sql
+CREATE TRIGGER view_insert_trigger
+INSTEAD OF INSERT ON siparis_raporu_view
+FOR EACH ROW EXECUTE FUNCTION siparis_ve_musteri_olustur();
+```
+
+---
+
+## 6. Zincirleme Tetikleyiciler (Cascading) ve Görünürlük (Visibility)
+
+- **Zincirleme Çalışma (Cascading):** Eğer A tablosundaki bir tetikleyici B tablosunda değişiklik yaparsa ve B tablosunun da kendi tetikleyicisi varsa, işlem zincirleme olarak devam eder. Varsayılan olarak maksimum iç içe tetiklenme derinliği limitlidir ve kontrolsüz bırakılırsa (A, B'yi tetikler; B, A'yı tetikler) sonsuz döngü engeli devreye girer.
+- **Görünürlük Kuralları (Visibility):** Bir ifade birden fazla satırı değiştirdiğinde, ilk satır için çalışan tetikleyicinin yaptığı değişiklikler, aynı işlem (statement) içindeki sonraki satırların tetikleyicileri tarafından **görülebilir**. Çünkü trigger'lar aynı Transaction içinde çalışır ve veritabanı snapshot'ı anlık olarak güncellenir. Bu duruma bağımlı mantıklar kurarken sıralamaya dikkat edilmelidir.

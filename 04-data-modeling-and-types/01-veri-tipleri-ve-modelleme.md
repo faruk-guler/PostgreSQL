@@ -468,3 +468,111 @@ CREATE TABLE sozlesmeler (
 5. **ENUM dikkatli kullanın:** Değer eklemek kolaydır ama silmek zordur (pg_enum'dan manuel müdahale gerekir).
 6. **UUID için v7 tercih edin:** İndex verimliliği için sıralı UUID'ler (v7) daha iyidir.
 
+---
+
+## Ek: Dış Anahtar (FOREIGN KEY) Detayları
+
+**Dış anahtar**, birbiriyle ilişkili tablolar arasındaki referanssal bütünlüğü sağlar. Bir tablonun kolonundaki değerlerin, ilişkili diğer tablodaki satırlarla uyuşmasını zorunlu kılar.
+
+```sql
+CREATE TABLE cities (
+    city     varchar(80) primary key,
+    location point
+);
+
+CREATE TABLE weather (
+    city      varchar(80) references cities(city),
+    temp_lo   int,
+    temp_hi   int,
+    prcp      real,
+    date      date
+);
+```
+
+Bir tabloda birden fazla kolon, birden fazla başka tabloya referanslanabilir:
+```sql
+CREATE TABLE t1 (
+  a integer PRIMARY KEY,
+  b integer,
+  c integer,
+  FOREIGN KEY (b, c) REFERENCES other_table (c1, c2)
+);
+```
+
+### ON DELETE / ON UPDATE Davranışları
+
+| Seçenek | Açıklama |
+|---|---|
+| `NO ACTION` | Silmeye izin vermez, hata üretir (Öntanımlı) |
+| `RESTRICT` | Silmeyi anında durdurur |
+| `CASCADE` | Bağlı satırları da siler |
+| `SET NULL` | Bağlı kolonu NULL'a çeker |
+| `SET DEFAULT` | Bağlı kolonu varsayılan değere çeker |
+
+```sql
+CREATE TABLE order_items (
+    product_no integer REFERENCES products ON DELETE RESTRICT,
+    order_id   integer REFERENCES orders ON DELETE CASCADE,
+    quantity   integer,
+    PRIMARY KEY (product_no, order_id)
+);
+```
+
+**MATCH FULL:** Referanslanan tablodaki kolonlardan bazıları NULL ise kontrolden kaçabilir. `MATCH FULL` ile NULL olan kolonların da kontrole alınması sağlanır:
+
+```sql
+CREATE TABLE order_items (
+    product_no integer,
+    order_id   integer,
+    FOREIGN KEY (product_no, order_id) REFERENCES products MATCH FULL
+);
+```
+
+---
+
+## Ek: Tablo Kalıtımı (INHERITANCE)
+
+Kalıtım, nesne tabanlı veritabanlarında kullanılan bir kavramdır. PostgreSQL bir tablonun başka bir tablodan kolon miras almasına izin verir:
+
+```sql
+-- Klasik çözüm (View ile)
+CREATE TABLE capitals (name text, population real, altitude int, state char(2));
+CREATE TABLE non_capitals (name text, population real, altitude int);
+CREATE VIEW cities AS
+  SELECT name, population, altitude FROM capitals
+    UNION
+  SELECT name, population, altitude FROM non_capitals;
+```
+
+**INHERITS ile daha temiz çözüm:**
+```sql
+CREATE TABLE cities (
+  name       text,
+  population real,
+  altitude   int
+);
+
+CREATE TABLE capitals (
+  state char(2)
+) INHERITS (cities);
+```
+
+`capitals` tablosu, `cities` tablosundaki tüm kolonları (`name`, `population`, `altitude`) otomatik olarak miras alır ve ek olarak `state` kolonu da içerir.
+
+### Kalıtım Sorgulama
+
+Parent tablodan sorgu yapıldığında hem parent hem de child tablo verileri gelir:
+
+```sql
+-- cities sorgularken capitals verileri de gelir
+SELECT * FROM cities;
+
+-- Sadece cities (parent) verilerini almak için:
+SELECT * FROM ONLY cities;
+```
+
+`SELECT`, `UPDATE` ve `DELETE` komutları `ONLY` spesifikasyonunu destekler.
+
+> [!NOTE]
+> PostgreSQL'de bir tablo sıfır veya daha fazla tablodan miras alabilir. Kalıtım özelliği özellikle Tablo Bölümlendirme (Table Partitioning) tasarımlarında geçmişte yaygın kullanılmıştır; günümüzde bildirimsel bölümlendirme (`PARTITION BY`) tercih edilir.
+

@@ -9,8 +9,9 @@ PostgreSQL'de karmaşık sorguları, içiçe geçmiş (Nested) onlarca alt sorgu
 `WITH` ifadesi, sorgunun çalışma süresi (Execution) boyunca var olan geçici bir tablo (veya değişken) tanımlamanıza olanak sağlar.
 
 ### Neden CTE Kullanmalıyız?
-1.  **Okunabilirlik (Readability):** Matruşka gibi iç içe geçmiş parantezleri ayırır, kodu yukarıdan aşağıya doğru okunabilir, modüler bloklar haline getirir.
-2.  **Yeniden Kullanılabilirlik (Reusability):** Oluşturduğunuz geçici tabloyu, ana sorgu içinde veya diğer CTE'ler içinde defalarca (Join vb. ile) kullanabilirsiniz.
+
+1. **Okunabilirlik (Readability):** Matruşka gibi iç içe geçmiş parantezleri ayırır, kodu yukarıdan aşağıya doğru okunabilir, modüler bloklar haline getirir.
+2. **Yeniden Kullanılabilirlik (Reusability):** Oluşturduğunuz geçici tabloyu, ana sorgu içinde veya diğer CTE'ler içinde defalarca (Join vb. ile) kullanabilirsiniz.
 
 ### Basit CTE Örneği
 
@@ -65,11 +66,14 @@ Bu yapı, normalde uygulama katmanında yapılacak 2 ayrı sorguyu ve veriyi net
 Klasik SQL, Hiyerarşik (Ağaç, Yorum-Cevap, Kategori-Alt Kategori) veri modellerini sorgulamak konusunda yetersiz kalır. PostgreSQL'de `WITH RECURSIVE` yapısı, bir sorgunun sonucunun tekrar aynı sorguya girdi olarak beslenmesini sağlar.
 
 ### `WITH RECURSIVE` Yapısı
+
 Rekürsif bir CTE iki ana parçadan oluşur ve aralarında `UNION` veya `UNION ALL` bulunur:
-1.  **Anchor (Çapa) Member:** Başlangıç noktasını belirler. (Döngünün nereden başlayacağı).
-2.  **Recursive Member:** Bir önceki adımın sonucunu kaynak tablo gibi kullanarak (CTE'nin adını referans alarak) döngüyü sürdürür. Şart sağlanana kadar çalışmaya devam eder.
+
+1. **Anchor (Çapa) Member:** Başlangıç noktasını belirler. (Döngünün nereden başlayacağı).
+2. **Recursive Member:** Bir önceki adımın sonucunu kaynak tablo gibi kullanarak (CTE'nin adını referans alarak) döngüyü sürdürür. Şart sağlanana kadar çalışmaya devam eder.
 
 ### Örnek 1: Seri Üretimi (Döngü)
+
 1'den 100'e kadar olan sayıları ve toplamlarını bulan basit bir döngü.
 
 ```sql
@@ -87,6 +91,7 @@ SELECT sum(n) FROM t;
 ```
 
 ### Örnek 2: Organizasyon Şeması (Hiyerarşi)
+
 Personel ve Yöneticilerinin (Manager) aynı tabloda tutulduğu bir ağaç yapısında, CEO'dan (En üst) başlayarak tüm organizasyon şemasını çıkarma.
 
 ```sql

@@ -1,6 +1,62 @@
 # İleri Seviye Sorgulama ve JOIN İşlemleri
 
-> **Bölüm Kapsamı:** Tablo Birleştirme (JOIN) Türleri, `DISTINCT ON` ile Bellek Tasarrufu, İlişkili Toplu DML (`UPDATE ... FROM`, `DELETE ... USING`), Alt Sorgu Optimizasyonları, Standart Sayfalama (`FETCH WITH TIES`) ve NULL-Güvenli Operatörler.
+> **Bölüm Kapsamı:** SQL Yazım Kuralları, Tablo Birleştirme (JOIN) Türleri, `DISTINCT ON` ile Bellek Tasarrufu, İlişkili Toplu DML (`UPDATE ... FROM`, `DELETE ... USING`), Alt Sorgu Optimizasyonları, Standart Sayfalama (`FETCH WITH TIES`) ve NULL-Güvenli Operatörler.
+
+---
+
+## 0. SQL Yazım Kuralları
+
+SQL cümlecikleri bir komutlar dizisi olarak oluşturulur. Her cümlecik noktalı virgülle sonlanır.
+
+### Büyük/Küçük Harf Duyarsızlığı
+
+SQL'de anahtar kelimeler ve tırnak içine alınmamış nesne isimleri büyük-küçük harf duyarsızdır. Şu ikisi arasında fark yoktur:
+
+```sql
+UPDATE MY_TABLE SET A = 5;
+uPDaTE my_TabLE SeT a = 5;
+```
+
+### Yorum Ekleme
+
+```sql
+-- Tek satırlık yorum
+
+/* Çok satırlı yorum
+ * with nesting: /* nested block comment */
+ */
+```
+
+### Operatör Öncelikleri (Yüksekten Düşüğe)
+
+| Operatör/Element | İlişki Kurduğu Taraf | Tanım |
+|---|---|---|
+| `.` | sol | Tablo / kolon adı ayracı |
+| `::` | sol | PostgreSQL-stili tip dönüştürücü |
+| `[ ]` | sol | Dizi elemanı seçme operatörü |
+| `+, -` | sağ | Pozitif ve negatif operatörü |
+| `^` | sol | Üs alma |
+| `*, /, %` | sol | Çarpma, bölme, mod alma |
+| `+, -` | sol | Toplama, çıkarma |
+| `(any other operator)` | sol | Tüm diğer dahili ve kullanıcı tanımlı operatörler |
+| `BETWEEN, IN, LIKE, ILIKE, SIMILAR` | — | Aralık ve küme üyeliği, metin eşleştirme |
+| `<, >, =, <=, >=, <>` | — | Karşılaştırma operatörleri |
+| `IS, ISNULL, NOTNULL` | — | IS TRUE, IS FALSE, IS NULL, IS DISTINCT FROM vb. |
+| `NOT` | sağ | Mantıksal olumsuzluk |
+| `AND` | sol | Mantıksal bağlaç |
+| `OR` | sol | Mantıksal ayraç |
+
+### Yaygın Değer İfadeleri
+
+| Değer İfadesi | Örnek |
+|---|---|
+| Kolon referansı | `correlation.columnname` |
+| Dış parametre | `$1`, `$2` vb. (fonksiyon parametreleri) |
+| Dizi elemanı | `mytable.arraycolumn[4]` |
+| Alan seçimi | `expression.fieldname` |
+| Fonksiyon çağrısı | `function_name(expr [, expr ...])` |
+| Tip dönüşümü | `CAST(expr AS type)` veya `expr::type` |
+| Skalar alt sorgu | `(SELECT max(pop) FROM cities WHERE ...)` |
 
 ---
 
