@@ -50,6 +50,21 @@ GRANT UPDATE (maas) ON personel TO ik_uzmani;
 REVOKE DELETE ON musteri_listesi FROM satis_uygulamasi;
 ```
 
+### 🔴 Çapraz VTYS Analizi: `DENY` Komutu Neden PostgreSQL'de Yoktur?
+
+Microsoft SQL Server ve Sybase gibi bazı veritabanlarında `GRANT`, `REVOKE`'un yanı sıra açık bir **`DENY`** komutu bulunur:
+* **MS SQL Server Yaklaşımı:** Bir kullanıcıya veya gruba `DENY SELECT ON Tablo TO Kullanici;` dendiğinde, o kullanıcı başka bir grup üzerinden `GRANT` almış olsa bile `DENY` her zaman önceliklidir (Explicit Deny trumps Grant).
+* **PostgreSQL Yaklaşımı (Closed-World Assumption):** PostgreSQL'de açık bir `DENY` komutu **yoktur**. PostgreSQL "Varsayılan Olarak Kapalı" (Whitelisting) modelini benimser. Bir role açıkça yetki (`GRANT`) verilmediği sürece zaten o nesneye erişemez. Eğer bir grubun yetkisinden dolayı erişiyorsa:
+  1. `REVOKE` ile yetki geri alınır.
+  2. Role `NOINHERIT` özelliği verilerek grup izinlerini otomatik devralması engellenir.
+  3. Satır veya işlem bazlı yasaklama gerekiyorsa **Row Level Security (RLS)** ile negatif politika (`RESTRICTIVE POLICY`) tanımlanır.
+
+### 🛡️ Veri Yönetim Komutları (DAC - Data Administration Commands): START/STOP AUDIT
+Geleneksel SQL ders kitaplarında ve eski standartlarda sistem denetimi `START AUDIT` / `STOP AUDIT` komutlarıyla tanımlanır. 
+Modern PostgreSQL'de denetim (audit trail) şu yöntemlerle kurumsal seviyede yönetilir:
+* **Yerleşik Loglama:** `log_statement = 'ddl'` veya `'mod'` parametreleri ile DDL/DML hareketlerini log dosyalarına yazdırma.
+* **`pgaudit` Eklentisi:** ANSI-SQL DAC gereksinimlerini karşılayan, PCI-DSS ve SOC2 uyumlu endüstri standardı PostgreSQL denetim motoru (Bkz: `10-security-and-backup/04-loglama-ve-pgaudit.md`).
+
 > [!WARNING]
 > Varsayılan olarak `PUBLIC` (Yani tüm kullanıcılar) şeması üzerinde nesne oluşturma ve yetkilendirmeler herkese açıktır. Güvenli sistemlerde bu kapatılır: `REVOKE ALL ON SCHEMA public FROM PUBLIC;`
 

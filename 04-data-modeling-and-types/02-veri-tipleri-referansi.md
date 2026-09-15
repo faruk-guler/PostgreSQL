@@ -21,6 +21,11 @@ PostgreSQL, SQL standartlarının sunduğu temel veri tiplerinin çok ötesinde,
 | **smallserial** / **serial** / **bigserial** | 2/4/8 bayt | Otomatik artan tam sayılar (arka planda Sequence nesnesi oluşturur) |
 | **money** | 8 bayt | Para birimi miktarı ($ veya yerel para simgeli, 2 ondalıklı) |
 
+> [!NOTE]
+> **`smallint` vs `integer` ve Derleyici Davranışı:**
+> Geleneksel SQL ders kitaplarında ve eski VTYS'lerde `smallint` tipinin her SQL derleyicisi tarafından doğrudan donanımsal olarak desteklenmeyebileceği ve motor tarafından örtük olarak `integer`'a yükseltilebileceği belirtilir. 
+> PostgreSQL'de ise `smallint` (dahili adıyla `int2`) tam 2 bayt olarak fiziksel diskte saklanır. Ancak CPU aritmetik işlemlerinde (örneğin iki `smallint` toplanırken) PostgreSQL sonucu otomatik olarak `integer` (int4) tipine yükseltir (type promotion). Bu sayede taşma (overflow) riski minimize edilir. Yüz milyonlarca satırlık tablolarda sütun sayısına ve disk/RAM tasarrufuna göre `smallint` kullanımı büyük avantaj sağlar.
+
 ---
 
 ## 2. Metin ve Karakter Tipleri (Character Types)
@@ -57,6 +62,15 @@ PostgreSQL, SQL standartlarının sunduğu temel veri tiplerinin çok ötesinde,
 | **bytea** | Değişken | Ham ikili veri (resim, ses, şifreli veri blokları) |
 | **bit(n)** | `n` bit | Sabit uzunluklu bit dizgisi (`B'10101'`) |
 | **bit varying(n)** (`varbit(n)`) | Değişken | Değişken uzunluklu bit dizgisi |
+
+> [!TIP]
+> **Mantıksal Değerlerin (Boolean) Yazım Kuralları ve Tarihsel Kökeni:**
+> * **Tarihsel Notasyon (`.T.` / `.F.`):** xBase (dBase, Clipper, FoxPro) döneminden kalma ders kitaplarında lojik değerlerin iki nokta arasında `.T.` (True) veya `.F.` (False) şeklinde yazıldığı belirtilir.
+> * **SQL Standartları ve PostgreSQL Esnekliği:** ANSI SQL standardı `TRUE`, `FALSE` ve `UNKNOWN` (NULL) anahtar kelimelerini kullanır. PostgreSQL bu konuda endüstrinin en esnek motorudur. Aşağıdaki tüm metin ve sayısal literalleri geçerli boolean olarak kabul eder:
+>   * **Doğru (TRUE):** `TRUE`, `'true'`, `'t'`, `'yes'`, `'y'`, `'on'`, `'1'`
+>   * **Yanlış (FALSE):** `FALSE`, `'false'`, `'f'`, `'no'`, `'n'`, `'off'`, `'0'`
+>   * *Örnek:* `SELECT 'yes'::BOOLEAN;` -> `true` döner.
+> * **`bit` ve `bit varying`:** Bit dizgileri `B'...'` önekiyle veya hex formatında `X'...'` ile yazılır (Örn: `B'10101'` veya `X'1F'`). Bayt düzeyinde maskeleme ve düşük seviyeli bayraklar (flags) için idealdir.
 
 ---
 
@@ -257,3 +271,23 @@ Ham ikili verileri (hash, kriptografik anahtarlar, dosya blokları) işlemek iç
 - `decode('string', 'hex' | 'base64')`: Hex veya Base64 metni ham `bytea` formatına dönüştürür.
 - `sha256(bytea)` / `sha512(bytea)`: Kriptografik özet hesaplar.
 - `get_byte(bytea, offset)` ve `set_byte(bytea, offset, new_value)`: İkili dizi üzerindeki belirli baytı okur veya değiştirir.
+
+---
+
+## 7. SQL Veri Girişi, Sabit Değerler (Literals) ve Format Kuralları
+
+Veritabanı sistemlerinde veri eklerken (`INSERT`) veya filtrelerken (`WHERE`) kullanılan sabit değerlerin (literals) yazım standartları:
+
+| Veri Türü | SQL ve PostgreSQL Yazım Kuralı | Örnek Yazım | Notlar |
+| :--- | :--- | :--- | :--- |
+| **Sayısal (Numeric)** | Tırnaksız doğrudan yazılır | `125`, `-42`, `3.1415`, `1e-4` | Ondalık ayracı daima noktadır (`.`), virgül parametre ayracıdır. |
+| **Metin (String)** | Tek tırnak (`'...'`) içerisine yazılır | `'PostgreSQL'`, `'Ali Veli'` | İçinde tek tırnak varsa çift tek tırnakla kaçırılır: `'O''Reilly'` |
+| **Kaçışlı Metin (C-Style)** | `E'...'` öneki ile yazılır | `E'Satır 1\nSatır 2\tTab'` | `\n`, `\t`, `\r` gibi kaçış karakterleri yorumlanır. |
+| **Dolar Tırnaklama (Dollar-Quote)** | `$$...$$` veya `$tag$...$tag$` | `$$SELECT 'iç içe tek tırnak'$$` | Karmaşık metinler ve fonksiyon gövdeleri için tırnak kaçışını ortadan kaldırır. |
+| **Mantıksal (Boolean)** | Tırnaklı veya anahtar kelime | `TRUE`, `FALSE`, `'t'`, `'f'` | Kitaplardaki eski xBase `.T.` / `.F.` notasyonunun yerini almıştır. |
+| **Tarih (Date)** | `'YYYY-MM-DD'` (ISO 8601) | `'2026-05-15'` veya `'2026-05-15'::DATE` | ODBC standardında `{d '2026-05-15'}` kabul edilir ancak PostgreSQL'de standart `'YYYY-MM-DD'` metnidir. |
+| **Zaman (Time)** | `'HH24:MI:SS'` | `'14:30:00'` veya `'14:30:00.123'` | 24 saat formatı esastır. |
+| **Zaman Damgası (Timestamp)** | `'YYYY-MM-DD HH24:MI:SS.US'` | `'2026-05-15 14:30:00+03'` | Zaman dilimli (`TIMESTAMPTZ`) kullanılması kurumsal standarttır. |
+| **Bit Dizisi (Bit String)** | `B'...'` veya `X'...'` | `B'10110'`, `X'A4F'` | `B` ikili (binary), `X` ise onaltılık (hexadecimal) gösterimdir. |
+| **Boş Değer (NULL)** | Tırnaksız `NULL` kelimesi | `NULL` | `'NULL'` string değildir; bellekteki değersizliği ve bilinmezliği ifade eder. |
+

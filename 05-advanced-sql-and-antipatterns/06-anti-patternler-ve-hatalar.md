@@ -161,6 +161,18 @@ END $$;
 
 ---
 
+### ❌ Anti-Pattern: Tüm Tabloyu Sıfırlarken `DELETE` Kullanmak (Dead Tuple ve Bloat Tuzağı)
+
+Tüm tabloyu temizlemek amacıyla `DELETE FROM siparisler;` çalıştırmak:
+1. Tablodaki her bir satırı tek tek işaretleyerek devasa miktarda ölü satır (Dead Tuple) üretir ve disk boyutunu sıfırlamaz.
+2. Milyonlarca satır için WAL dosyası üretir ve replikasyon kuyruğunu şişirir.
+3. Arka planda `VACUUM` çalışana kadar disk alanı asla geri kazanılamaz.
+
+**✅ Doğru DBA Çözümü:** 
+Bütün tablo temizlenecekse **`TRUNCATE TABLE siparisler;`** kullanılmalıdır. `TRUNCATE` fiziksel disk göstericisini anında sıfırlar, diski işletim sistemine geri kazandırır ve minimal WAL üretir. Üstelik PostgreSQL'de transaction içinde güvenle `ROLLBACK` edilebilir. (Ayrıntılar için bkz: [08-sql-komut-taksonomisi-ve-temel-dml.md](file:///c:/Users/SISTEM/Downloads/Antigravity/05-advanced-sql-and-antipatterns/08-sql-komut-taksonomisi-ve-temel-dml.md)).
+
+---
+
 ## 3. Konfigürasyon ve İşletim Hataları
 
 ### ❌ Anti-Pattern: "Idle in Transaction" Oturumlarını Açık Unutmak
